@@ -1,0 +1,252 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  labels:
+    type: frontend
+  name: app-frontend
+spec:
+  compositeTypeRef:
+    apiVersion: acmeplatform.com/v1alpha1
+    kind: App
+  mode: Pipeline
+  pipeline:
+  - functionRef:
+      name: function-patch-and-transform
+    input:
+      apiVersion: pt.fn.crossplane.io/v1beta1
+      environment: null
+      kind: Resources
+      patchSets:
+      - name: metadata
+        patches:
+        - fromFieldPath: metadata.labels
+          type: FromCompositeFieldPath
+      resources:
+      - base:
+          apiVersion: kubernetes.crossplane.io/v1alpha1
+          kind: ProviderConfig
+          spec:
+            credentials:
+              source: InjectedIdentity
+        name: kubernetes
+        patches:
+        - fromFieldPath: spec.id
+          toFieldPath: metadata.name
+          type: FromCompositeFieldPath
+        readinessChecks:
+        - type: None
+      - base:
+          apiVersion: kubernetes.crossplane.io/v1alpha1
+          kind: Object
+          spec:
+            forProvider:
+              manifest:
+                apiVersion: apps/v1
+                kind: Deployment
+                spec:
+                  template:
+                    spec:
+                      containers:
+                      - livenessProbe:
+                          httpGet:
+                            path: /
+                            port: 80
+                        name: frontend
+                        ports:
+                        - containerPort: 80
+                        readinessProbe:
+                          httpGet:
+                            path: /
+                            port: 80
+                        resources:
+                          limits:
+                            cpu: 250m
+                            memory: 256Mi
+                          requests:
+                            cpu: 125m
+                            memory: 128Mi
+        name: deployment
+        patches:
+        - fromFieldPath: spec.id
+          toFieldPath: metadata.name
+          transforms:
+          - string:
+              fmt: '%s-deployment'
+              type: Format
+            type: string
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.id
+          toFieldPath: spec.forProvider.manifest.metadata.name
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.parameters.namespace
+          toFieldPath: spec.forProvider.manifest.metadata.namespace
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.id
+          toFieldPath: spec.forProvider.manifest.metadata.labels.app
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.id
+          toFieldPath: spec.forProvider.manifest.spec.selector.matchLabels.app
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.id
+          toFieldPath: spec.forProvider.manifest.spec.template.metadata.labels.app
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.parameters.image
+          toFieldPath: spec.forProvider.manifest.spec.template.spec.containers[0].image
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.parameters.port
+          toFieldPath: spec.forProvider.manifest.spec.template.spec.containers[0].ports[0].containerPort
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.parameters.port
+          toFieldPath: spec.forProvider.manifest.spec.template.spec.containers[0].livenessProbe.httpGet.port
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.parameters.port
+          toFieldPath: spec.forProvider.manifest.spec.template.spec.containers[0].readinessProbe.httpGet.port
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.id
+          toFieldPath: spec.providerConfigRef.name
+          type: FromCompositeFieldPath
+        readinessChecks:
+        - type: None
+      - base:
+          apiVersion: kubernetes.crossplane.io/v1alpha1
+          kind: Object
+          spec:
+            forProvider:
+              manifest:
+                apiVersion: v1
+                kind: Service
+                spec:
+                  ports:
+                  - name: http
+                    port: 80
+                    protocol: TCP
+                    targetPort: 80
+                  type: ClusterIP
+        name: service
+        patches:
+        - fromFieldPath: spec.id
+          toFieldPath: metadata.name
+          transforms:
+          - string:
+              fmt: '%s-service'
+              type: Format
+            type: string
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.id
+          toFieldPath: spec.forProvider.manifest.metadata.name
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.parameters.namespace
+          toFieldPath: spec.forProvider.manifest.metadata.namespace
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.id
+          toFieldPath: spec.forProvider.manifest.metadata.labels.app
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.id
+          toFieldPath: spec.forProvider.manifest.spec.selector.app
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.parameters.port
+          toFieldPath: spec.forProvider.manifest.spec.ports[0].port
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.parameters.port
+          toFieldPath: spec.forProvider.manifest.spec.ports[0].targetPort
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.id
+          toFieldPath: spec.providerConfigRef.name
+          type: FromCompositeFieldPath
+        readinessChecks:
+        - type: None
+      - base:
+          apiVersion: kubernetes.crossplane.io/v1alpha1
+          kind: Object
+          spec:
+            forProvider:
+              manifest:
+                apiVersion: networking.k8s.io/v1
+                kind: Ingress
+                metadata: null
+                spec:
+                  ingressClassName: nginx
+                  rules:
+                  - host: acmeplatform.com
+                    http:
+                      paths:
+                      - backend:
+                          service:
+                            name: acme-platform
+                            port:
+                              number: 80
+                        path: /
+                        pathType: Prefix
+        name: ingress
+        patches:
+        - fromFieldPath: spec.id
+          toFieldPath: metadata.name
+          transforms:
+          - string:
+              fmt: '%s-ingress'
+              type: Format
+            type: string
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.id
+          toFieldPath: spec.forProvider.manifest.metadata.name
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.parameters.namespace
+          toFieldPath: spec.forProvider.manifest.metadata.namespace
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.id
+          toFieldPath: spec.forProvider.manifest.metadata.labels.app
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.parameters.host
+          toFieldPath: spec.forProvider.manifest.spec.rules[0].host
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.parameters.port
+          toFieldPath: spec.forProvider.manifest.spec.rules[0].http.paths[0].backend.service.port.number
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.id
+          toFieldPath: spec.providerConfigRef.name
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.forProvider.manifest.spec.rules[0].host
+          toFieldPath: status.host
+          type: ToCompositeFieldPath
+        readinessChecks:
+        - type: None
+      - base:
+          apiVersion: kubernetes.crossplane.io/v1alpha1
+          kind: Object
+          spec:
+            forProvider:
+              manifest:
+                apiVersion: autoscaling/v1
+                kind: HorizontalPodAutoscaler
+                spec:
+                  maxReplicas: 6
+                  minReplicas: 2
+                  scaleTargetRef:
+                    apiVersion: apps/v1
+                    kind: Deployment
+                  targetCPUUtilizationPercentage: 80
+        name: hpa
+        patches:
+        - fromFieldPath: spec.id
+          toFieldPath: metadata.name
+          transforms:
+          - string:
+              fmt: '%s-ingress'
+              type: Format
+            type: string
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.id
+          toFieldPath: spec.forProvider.manifest.metadata.name
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.parameters.namespace
+          toFieldPath: spec.forProvider.manifest.metadata.namespace
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.id
+          toFieldPath: spec.forProvider.manifest.metadata.labels.app
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.id
+          toFieldPath: spec.forProvider.manifest.spec.scaleTargetRef.name
+          type: FromCompositeFieldPath
+        readinessChecks:
+        - type: None
+    step: patch-and-transform
