@@ -144,6 +144,9 @@ spec:
         - fromFieldPath: spec.id
           toFieldPath: spec.forProvider.manifest.metadata.labels.app
           type: FromCompositeFieldPath
+        - fromFieldPath: metadata.annotations
+          toFieldPath: spec.forProvider.manifest.metadata.annotations
+          type: FromCompositeFieldPath
         - fromFieldPath: spec.id
           toFieldPath: spec.forProvider.manifest.spec.selector.app
           type: FromCompositeFieldPath
@@ -199,6 +202,9 @@ spec:
         - fromFieldPath: spec.id
           toFieldPath: spec.forProvider.manifest.metadata.labels.app
           type: FromCompositeFieldPath
+        - fromFieldPath: metadata.annotations
+          toFieldPath: spec.forProvider.manifest.metadata.annotations
+          type: FromCompositeFieldPath
         - fromFieldPath: spec.parameters.host
           toFieldPath: spec.forProvider.manifest.spec.rules[0].host
           type: FromCompositeFieldPath
@@ -247,6 +253,9 @@ spec:
         - fromFieldPath: spec.id
           toFieldPath: spec.forProvider.manifest.metadata.labels.app
           type: FromCompositeFieldPath
+        - fromFieldPath: metadata.annotations
+          toFieldPath: spec.forProvider.manifest.metadata.annotations
+          type: FromCompositeFieldPath          
         - fromFieldPath: spec.id
           toFieldPath: spec.forProvider.manifest.spec.scaleTargetRef.name
           type: FromCompositeFieldPath
