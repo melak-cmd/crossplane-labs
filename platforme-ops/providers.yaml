@@ -13,5 +13,5 @@ spec:
   runtimeConfigRef:
     apiVersion: pkg.crossplane.io/v1beta1
     kind: DeploymentRuntimeConfig
-    name: provider-kubernetes
+    name: default
   skipDependencyResolution: false
