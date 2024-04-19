@@ -219,4 +219,4 @@ spec:
     #       type: FromCompositeFieldPath          
     #     readinessChecks:
     #     - type: None      
-    # step: patch-and-transform
+    step: patch-and-transform
