@@ -161,86 +161,35 @@ spec:
           type: FromCompositeFieldPath
         readinessChecks:
         - type: None
-      # - base:
-      #     apiVersion: kubernetes.crossplane.io/v1alpha1
-      #     kind: Object
-      #     spec:
-      #       forProvider:
-      #         manifest:
-      #           apiVersion: networking.k8s.io/v1
-      #           kind: Ingress
-      #           metadata: null
-      #           spec:
-      #             ingressClassName: nginx
-      #             rules:
-      #             - host: acmeplatform.com
-      #               http:
-      #                 paths:
-      #                 - backend:
-      #                     service:
-      #                       name: acme-platform
-      #                       port:
-      #                         number: 80
-      #                   path: /
-      #                   pathType: Prefix
-      #   name: ingress
-      #   patches:
-      #   - fromFieldPath: spec.id
-      #     toFieldPath: metadata.name
-      #     transforms:
-      #     - string:
-      #         fmt: '%s-ingress'
-      #         type: Format
-      #       type: string
-      #     type: FromCompositeFieldPath
-      #   - fromFieldPath: spec.id
-      #     toFieldPath: spec.forProvider.manifest.metadata.name
-      #     type: FromCompositeFieldPath
-      #   - fromFieldPath: spec.parameters.namespace
-      #     toFieldPath: spec.forProvider.manifest.metadata.namespace
-      #     type: FromCompositeFieldPath
-      #   - fromFieldPath: spec.id
-      #     toFieldPath: spec.forProvider.manifest.metadata.labels.app
-      #     type: FromCompositeFieldPath
-      #   - fromFieldPath: metadata.annotations
-      #     toFieldPath: spec.forProvider.manifest.metadata.annotations
-      #     type: FromCompositeFieldPath
-      #   - fromFieldPath: spec.parameters.host
-      #     toFieldPath: spec.forProvider.manifest.spec.rules[0].host
-      #     type: FromCompositeFieldPath
-      #   - fromFieldPath: spec.parameters.port
-      #     toFieldPath: spec.forProvider.manifest.spec.rules[0].http.paths[0].backend.service.port.number
-      #     type: FromCompositeFieldPath
-      #   - fromFieldPath: spec.forProvider.manifest.spec.rules[0].host
-      #     toFieldPath: status.host
-      #     type: ToCompositeFieldPath
-      #   - fromFieldPath: spec.id
-      #     toFieldPath: spec.providerConfigRef.name
-      #     type: FromCompositeFieldPath          
-      #   readinessChecks:
-      #   - type: None
       - base:
           apiVersion: kubernetes.crossplane.io/v1alpha1
           kind: Object
           spec:
             forProvider:
               manifest:
-                apiVersion: autoscaling/v1
-                kind: HorizontalPodAutoscaler
+                apiVersion: networking.k8s.io/v1
+                kind: Ingress
+                metadata: null
                 spec:
-                  maxReplicas: 6
-                  minReplicas: 2
-                  scaleTargetRef:
-                    apiVersion: apps/v1
-                    kind: Deployment
-                  targetCPUUtilizationPercentage: 80
-        name: hpa
+                  ingressClassName: nginx
+                  rules:
+                  - host: acmeplatform.com
+                    http:
+                      paths:
+                      - backend:
+                          service:
+                            name: acme-platform
+                            port:
+                              number: 80
+                        path: /
+                        pathType: Prefix
+        name: ingress
         patches:
         - fromFieldPath: spec.id
           toFieldPath: metadata.name
           transforms:
           - string:
-              fmt: '%s-hpa'
+              fmt: '%s-ingress'
               type: Format
             type: string
           type: FromCompositeFieldPath
@@ -256,9 +205,18 @@ spec:
         - fromFieldPath: metadata.annotations
           toFieldPath: spec.forProvider.manifest.metadata.annotations
           type: FromCompositeFieldPath
+        - fromFieldPath: spec.parameters.host
+          toFieldPath: spec.forProvider.manifest.spec.rules[0].host
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.parameters.port
+          toFieldPath: spec.forProvider.manifest.spec.rules[0].http.paths[0].backend.service.port.number
+          type: FromCompositeFieldPath
+        - fromFieldPath: spec.forProvider.manifest.spec.rules[0].host
+          toFieldPath: status.host
+          type: ToCompositeFieldPath
         - fromFieldPath: spec.id
-          toFieldPath: spec.forProvider.manifest.spec.scaleTargetRef.name
-          type: FromCompositeFieldPath       
+          toFieldPath: spec.providerConfigRef.name
+          type: FromCompositeFieldPath          
         readinessChecks:
-        - type: None
+        - type: None      
     step: patch-and-transform
