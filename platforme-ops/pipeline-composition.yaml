@@ -211,12 +211,12 @@ spec:
         - fromFieldPath: spec.parameters.port
           toFieldPath: spec.forProvider.manifest.spec.rules[0].http.paths[0].backend.service.port.number
           type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.providerConfigRef.name
-          type: FromCompositeFieldPath
         - fromFieldPath: spec.forProvider.manifest.spec.rules[0].host
           toFieldPath: status.host
           type: ToCompositeFieldPath
+        - fromFieldPath: spec.id
+          toFieldPath: spec.providerConfigRef.name
+          type: FromCompositeFieldPath          
         readinessChecks:
         - type: None
       - base:
