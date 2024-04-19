@@ -10,6 +10,6 @@ spec:
     matchLabels:
       type: frontend
   parameters:
-    namespace: melak-cmd
+    namespace: demo
     image: piotrzan/nginx-demo:green
     host: nginx.127.0.0.1.nip.io
