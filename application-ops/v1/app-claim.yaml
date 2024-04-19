@@ -1,4 +1,4 @@
-apiVersion: acmeplatform.com/v1alpha1
+apiVersion: melakcloud.com/v1alpha1
 kind: AppClaim
 metadata:
   name: app-demo 
