@@ -1,0 +1,17 @@
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  labels:
+    argocd.argoproj.io/instance: crossplane
+  name: provider-kubernetes
+spec:
+  ignoreCrossplaneConstraints: false
+  package: xpkg.upbound.io/crossplane-contrib/provider-kubernetes:v0.12.1
+  packagePullPolicy: IfNotPresent
+  revisionActivationPolicy: Automatic
+  revisionHistoryLimit: 1
+  runtimeConfigRef:
+    apiVersion: pkg.crossplane.io/v1beta1
+    kind: DeploymentRuntimeConfig
+    name: provider-kubernetes
+  skipDependencyResolution: false
