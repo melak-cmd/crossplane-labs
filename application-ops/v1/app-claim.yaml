@@ -1,9 +1,9 @@
 apiVersion: acmeplatform.com/v1alpha1
 kind: AppClaim
 metadata:
-  name: platform-demo 
+  name: app-demo 
   labels:
-    app-owner: piotrzan
+    app-owner: melak-cmd
 spec:
   id: acme-platform
   compositionSelector:
