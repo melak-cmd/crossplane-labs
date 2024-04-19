@@ -240,7 +240,7 @@ spec:
           toFieldPath: metadata.name
           transforms:
           - string:
-              fmt: '%s-ingress'
+              fmt: '%s-hpa'
               type: Format
             type: string
           type: FromCompositeFieldPath
@@ -255,10 +255,10 @@ spec:
           type: FromCompositeFieldPath
         - fromFieldPath: metadata.annotations
           toFieldPath: spec.forProvider.manifest.metadata.annotations
-          type: FromCompositeFieldPath          
+          type: FromCompositeFieldPath
         - fromFieldPath: spec.id
           toFieldPath: spec.forProvider.manifest.spec.scaleTargetRef.name
-          type: FromCompositeFieldPath
+          type: FromCompositeFieldPath       
         readinessChecks:
         - type: None
     step: patch-and-transform
