@@ -10,7 +10,36 @@ spec:
     kind: App
   mode: Pipeline
   pipeline:
-  - functionRef:
+  - step: namespaces
+    functionRef:
+      name: crossplane-contrib-function-go-templating
+    input:
+      apiVersion: gotemplating.fn.crossplane.io/v1beta1
+      inline:
+        template: >-
+          {{ range .observed.composite.resource.spec.parameters.namespaces }}
+          ---
+          apiVersion: kubernetes.crossplane.io/v1alpha2
+          kind: Object
+          metadata:
+            name: {{ $.observed.composite.resource.spec.id }}-ns-{{ . }}
+            annotations:
+              crossplane.io/external-name: {{ . }}
+              gotemplating.fn.crossplane.io/composition-resource-name: {{ $.observed.composite.resource.spec.id }}-ns-{{ . }}
+          spec:
+            forProvider:
+              manifest:
+                apiVersion: "v1"
+                kind: "Namespace"
+                metadata:
+                  name: {{ . }}
+            providerConfigRef:
+              name: {{ $.observed.composite.resource.spec.id }}
+          {{ end }}
+      kind: GoTemplate
+      source: Inline
+  - step: patch-and-transform
+    functionRef:
       name: function-patch-and-transform
     input:
       apiVersion: pt.fn.crossplane.io/v1beta1
@@ -219,4 +248,4 @@ spec:
     #       type: FromCompositeFieldPath          
     #     readinessChecks:
     #     - type: None      
-    step: patch-and-transform
+    
