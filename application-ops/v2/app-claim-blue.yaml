@@ -1,15 +1,15 @@
 apiVersion: acmeplatform.com/v1alpha1
 kind: AppClaim
 metadata:
-  name: platform-demo 
+  name: app-demo 
   labels:
-    app-owner: piotrzan
+    app-owner: melak-cmd
 spec:
-  id: acme-platform
+  id: melak-cmd
   compositionSelector:
     matchLabels:
       type: frontend
   parameters:
-    namespace: devops-team
+    namespace: melak-cmd
     image: piotrzan/nginx-demo:blue
     host: nginx.127.0.0.1.nip.io

@@ -6,7 +6,7 @@ metadata:
   name: app-frontend
 spec:
   compositeTypeRef:
-    apiVersion: acmeplatform.com/v1alpha1
+    apiVersion: melakcloud.com/v1alpha1
     kind: App
   mode: Pipeline
   pipeline:

@@ -5,11 +5,11 @@ metadata:
   labels:
     app-owner: melak-cmd
 spec:
-  id: acme-platform
+  id: melak-cmd
   compositionSelector:
     matchLabels:
       type: frontend
   parameters:
-    namespace: devops-team
+    namespace: melak-cmd
     image: piotrzan/nginx-demo:green
     host: nginx.127.0.0.1.nip.io
