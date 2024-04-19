@@ -3,5 +3,3 @@ kind: Kustomization
 resources:
 - compositeresourcedefinition.yaml
 - pipeline-composition.yaml
-- functions.yaml
-- providers.yaml
