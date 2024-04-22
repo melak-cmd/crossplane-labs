@@ -198,6 +198,6 @@ spec:
             {{ end }}
         kind: GoTemplate
         source: Inline
-    # - step: automatically-detect-ready-composed-resources
-    #   functionRef:
-    #     name: function-auto-ready
+    - step: automatically-detect-ready-composed-resources
+      functionRef:
+        name: function-auto-ready
