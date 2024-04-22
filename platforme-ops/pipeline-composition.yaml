@@ -165,7 +165,7 @@ spec:
     
     - step: namespaces
       functionRef:
-        name: crossplane-contrib-function-go-templating
+        name: function-go-templating
       input:
         apiVersion: gotemplating.fn.crossplane.io/v1beta1
         inline:
