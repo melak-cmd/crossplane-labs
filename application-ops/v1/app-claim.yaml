@@ -13,8 +13,8 @@ spec:
     namespace: demo
     image: piotrzan/nginx-demo:green
     host: nginx.127.0.0.1.nip.io
-    env:
-      - name: thisIsName
-        value: thisIsValue
-      - name: thisIsName1
-        value: thisIsValue1
+    # env:
+    #   - name: thisIsName
+    #     value: thisIsValue
+    #   - name: thisIsName1
+    #     value: thisIsValue1
