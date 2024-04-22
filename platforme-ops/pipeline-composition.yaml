@@ -67,7 +67,6 @@ spec:
                                 requests:
                                   cpu: 125m
                                   memory: 128Mi
-            
             patches:
               - fromFieldPath: spec.id
                 toFieldPath: metadata.name
