@@ -5,7 +5,7 @@ metadata:
   labels:
     app-owner: melak-cmd
 spec:
-  id: melak-cmd
+  id: w-oni-c
   compositionSelector:
     matchLabels:
       type: frontend
@@ -13,3 +13,8 @@ spec:
     namespace: demo
     image: piotrzan/nginx-demo:green
     host: nginx.127.0.0.1.nip.io
+    env:
+      - name: thisIsName
+        value: thisIsValue
+      - name: thisIsName1
+        value: thisIsValue1
