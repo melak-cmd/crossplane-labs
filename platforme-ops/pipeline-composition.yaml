@@ -30,10 +30,13 @@ spec:
                 credentials:
                   source: InjectedIdentity
             name: kubernetes
-            patches:
+            patches:             
               - fromFieldPath: spec.id
-                toFieldPath: metadata.name
-                type: FromCompositeFieldPath
+                toFieldPath: spec.forProvider.manifest.metadata.name
+                type: FromCompositeFieldPath 
+              - fromFieldPath: metadata.annotations
+                toFieldPath: spec.forProvider.manifest.metadata.annotations
+                type: FromCompositeFieldPath       
             readinessChecks:
               - type: None
           - name: deployment
