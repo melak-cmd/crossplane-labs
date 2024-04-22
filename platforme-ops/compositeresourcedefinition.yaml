@@ -29,6 +29,14 @@ spec:
               parameters:
                 type: object
                 properties:
+                  namespaces:
+                    description: List of Namespaces that should be created in the cluster
+                    type: array
+                    items:
+                      type: string
+                    default:
+                      - dev
+                      - production
                   namespace:
                     description: The container image of the application.
                     type: string
