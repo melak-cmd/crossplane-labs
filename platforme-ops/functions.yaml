@@ -1,3 +1,4 @@
+---
 apiVersion: pkg.crossplane.io/v1beta1
 kind: Function
 metadata:
@@ -7,6 +8,25 @@ metadata:
 spec:
   ignoreCrossplaneConstraints: false
   package: xpkg.upbound.io/crossplane-contrib/function-patch-and-transform:v0.4.0
+  packagePullPolicy: IfNotPresent
+  revisionActivationPolicy: Automatic
+  revisionHistoryLimit: 1
+  runtimeConfigRef:
+    apiVersion: pkg.crossplane.io/v1beta1
+    kind: DeploymentRuntimeConfig
+    name: default
+  skipDependencyResolution: false
+
+---
+apiVersion: pkg.crossplane.io/v1beta1
+kind: Function
+metadata:
+  labels:
+    argocd.argoproj.io/instance: crossplane
+  name: function-go-templating
+spec:
+  ignoreCrossplaneConstraints: false
+  package:  xpkg.upbound.io/crossplane-contrib/function-go-templating:v0.4.1
   packagePullPolicy: IfNotPresent
   revisionActivationPolicy: Automatic
   revisionHistoryLimit: 1
