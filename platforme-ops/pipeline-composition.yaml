@@ -34,6 +34,12 @@ spec:
               - fromFieldPath: spec.id
                 toFieldPath: metadata.name
                 type: FromCompositeFieldPath
+              - fromFieldPath: spec.id
+                toFieldPath: spec.forProvider.manifest.metadata.labels.app
+                type: FromCompositeFieldPath
+              - fromFieldPath: metadata.annotations
+                toFieldPath: spec.forProvider.manifest.metadata.annotations
+                type: FromCompositeFieldPath
             readinessChecks:
               - type: None
           - name: deployment
@@ -83,12 +89,8 @@ spec:
               - fromFieldPath: spec.parameters.namespace
                 toFieldPath: spec.forProvider.manifest.metadata.namespace
                 type: FromCompositeFieldPath
-              - fromFieldPath: spec.id
-                toFieldPath: spec.forProvider.manifest.metadata.labels.app
-                type: FromCompositeFieldPath
-              # - fromFieldPath: metadata.annotations
-              #   toFieldPath: spec.forProvider.manifest.metadata.annotations
-              #   type: FromCompositeFieldPath
+              - type: PatchSet
+                patchSetName: metadata              
               - fromFieldPath: spec.id
                 toFieldPath: spec.forProvider.manifest.spec.selector.matchLabels.app
                 type: FromCompositeFieldPath
