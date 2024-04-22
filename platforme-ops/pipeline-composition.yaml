@@ -163,14 +163,14 @@ spec:
           readinessChecks:
           - type: None
     
-    - step: generating
+    - step: namespaces
       functionRef:
-        name: function-go-templating
+        name: crossplane-contrib-function-go-templating
       input:
         apiVersion: gotemplating.fn.crossplane.io/v1beta1
         inline:
           template: >-
-            
+            {{ range .observed.composite.resource.spec.parameters.namespaces }}
 
             ---
 
@@ -179,45 +179,19 @@ spec:
             kind: Object
 
             metadata:
-              name: {{ $.observed.composite.resource.spec.id }}-deployment-1
+              name: {{ $.observed.composite.resource.spec.id }}-ns-{{ . }}
               annotations:
-                crossplane.io/external-name: {{ $.observed.composite.resource.spec.id }}-deployment-1
-                gotemplating.fn.crossplane.io/composition-resource-name: {{ $.observed.composite.resource.spec.id }}-deployment-1
+                crossplane.io/external-name: {{ . }}
+                gotemplating.fn.crossplane.io/composition-resource-name: {{ $.observed.composite.resource.spec.id }}-ns-{{ . }}
             spec:
               forProvider:
                 manifest:
-                  apiVersion: "app/v1"
-                  kind: "Deployment"
+                  apiVersion: "v1"
+                  kind: "Namespace"
                   metadata:
-                    name: {{ $.observed.composite.resource.spec.id }}
-                    namespace: {{ $.observed.composite.resource.spec.parameters.namespace }}
-                  spec:
-                    template:
-                      spec:
-                        containers:
-                        - name: frontend
-                          env:
-                          {{ range .observed.composite.resource.spec.parameters.env }}
-                            - name: {{ .name }}
-                              value: {{ .value }}
-                          {{ end }}
-                          livenessProbe:
-                            httpGet:
-                              path: /
-                              port: 80
-                          readinessProbe:
-                            httpGet:
-                              path: /
-                              port: 80
-                          resources:
-                            limits:
-                              cpu: 250m
-                              memory: 256Mi
-                            requests:
-                              cpu: 125m
-                              memory: 128
+                    name: {{ . }}
               providerConfigRef:
                 name: {{ $.observed.composite.resource.spec.id }}
-            
+            {{ end }}
         kind: GoTemplate
         source: Inline
