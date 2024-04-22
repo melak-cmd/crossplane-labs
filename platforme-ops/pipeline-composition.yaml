@@ -85,9 +85,9 @@ spec:
               - fromFieldPath: spec.id
                 toFieldPath: spec.forProvider.manifest.metadata.labels.app
                 type: FromCompositeFieldPath
-              - fromFieldPath: metadata.annotations
-                toFieldPath: spec.forProvider.manifest.metadata.annotations
-                type: FromCompositeFieldPath
+              # - fromFieldPath: metadata.annotations
+              #   toFieldPath: spec.forProvider.manifest.metadata.annotations
+              #   type: FromCompositeFieldPath
               - fromFieldPath: spec.id
                 toFieldPath: spec.forProvider.manifest.spec.selector.matchLabels.app
                 type: FromCompositeFieldPath
@@ -145,9 +145,9 @@ spec:
               - fromFieldPath: spec.id
                 toFieldPath: spec.forProvider.manifest.metadata.labels.app
                 type: FromCompositeFieldPath
-              - fromFieldPath: metadata.annotations
-                toFieldPath: spec.forProvider.manifest.metadata.annotations
-                type: FromCompositeFieldPath
+              # - fromFieldPath: metadata.annotations
+              #   toFieldPath: spec.forProvider.manifest.metadata.annotations
+              #   type: FromCompositeFieldPath
               - fromFieldPath: spec.id
                 toFieldPath: spec.forProvider.manifest.spec.selector.app
                 type: FromCompositeFieldPath
