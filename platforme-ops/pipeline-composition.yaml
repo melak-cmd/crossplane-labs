@@ -39,7 +39,7 @@ spec:
           - name: deployment
             base:
               apiVersion: kubernetes.crossplane.io/v1alpha1
-              kind: Object        
+              kind: Object
               spec:
                 forProvider:
                   manifest:
@@ -69,8 +69,6 @@ spec:
                                   memory: 128Mi
             
             patches:
-              - fromFieldPath: metadata.annotations
-                toFieldPath: metadata.annotations
               - fromFieldPath: spec.id
                 toFieldPath: metadata.name
                 transforms:
