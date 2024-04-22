@@ -182,7 +182,8 @@ spec:
 
               name: {{ $.observed.composite.resource.spec.id }}-ns-{{ . }}
               annotations:
-                crossplane.io/external-name: {{ . }}                
+                crossplane.io/external-name: {{ . }}
+                crossplane.io/paused: "true"             
                 gotemplating.fn.crossplane.io/composition-resource-name: {{ $.observed.composite.resource.spec.id }}-ns-{{ . }}
             spec:
 
