@@ -43,6 +43,18 @@ spec:
                   host:
                     description: The host address of the application.
                     type: string
+                  env:
+                    type: array
+                    description: List of key-value pairs representing environment variables to add to the deployment.
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          description: "Name of the environment variable."
+                        value:
+                          type: string
+                          description: "Value of the environment variable."
                 required:
                 - image
             required:
