@@ -63,6 +63,7 @@ spec:
                   kind: "Deployment"
                   metadata:
                     name: {{ $.observed.composite.resource.spec.id }}
+                    namespace: {{ $.observed.composite.resource.spec.parameters.namespace }}
                   spec:
                     template:
                       spec:
