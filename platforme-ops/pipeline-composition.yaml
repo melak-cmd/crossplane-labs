@@ -168,16 +168,16 @@ spec:
         name: function-go-templating
       input:
         apiVersion: gotemplating.fn.crossplane.io/v1beta1
-        environment: null
-        kind: GoTemplate
-        source: Inline
         inline:
           template: >-
-          
+            
+
             ---
 
-            apiVersion: kubernetes.crossplane.io/v1alpha1            
+            apiVersion: kubernetes.crossplane.io/v1alpha2
+
             kind: Object
+
             metadata:
               name: {{ $.observed.composite.resource.spec.id }}-deployment-1
               annotations:
@@ -189,7 +189,7 @@ spec:
                   apiVersion: "app/v1"
                   kind: "Deployment"
                   metadata:
-                    name: {{ $.observed.composite.resource.spec.id }}-deployment-1
+                    name: {{ $.observed.composite.resource.spec.id }}
                     namespace: {{ $.observed.composite.resource.spec.parameters.namespace }}
                   spec:
                     template:
@@ -218,3 +218,6 @@ spec:
                               memory: 128
               providerConfigRef:
                 name: {{ $.observed.composite.resource.spec.id }}
+            
+        kind: GoTemplate
+        source: Inline
