@@ -1,0 +1,79 @@
+apiVersion: v1
+items:
+- apiVersion: argoproj.io/v1alpha1
+  kind: Application
+  metadata:
+    name: platforme-ops
+    namespace: argocd
+  spec:
+    destination:
+      server: https://kubernetes.default.svc
+    project: default
+    source:
+      path: Platform-OPS
+      repoURL: https://github.com/melak-cmd/crossplane-gitlab-provider.git
+      targetRevision: HEAD
+    syncPolicy:
+      automated:
+        prune: true
+      retry:
+        backoff:
+          duration: 5s
+          factor: 2
+          maxDuration: 0m10s
+        limit: 2
+      syncOptions:
+      - ApplyOutOfSyncOnly=true
+- apiVersion: argoproj.io/v1alpha1
+  kind: Application
+  metadata:
+    name: application-ops
+    namespace: argocd
+  spec:
+    destination:
+      namespace: crossplane-system
+      server: https://kubernetes.default.svc
+    project: default
+    source:
+      path: Application-OPS
+      repoURL: https://github.com/melak-cmd/crossplane-gitlab-provider.git
+      targetRevision: HEAD
+    syncPolicy:
+      automated:
+        prune: true
+      retry:
+        backoff:
+          duration: 5s
+          factor: 2
+          maxDuration: 0m10s
+        limit: 2
+      syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+- apiVersion: argoproj.io/v1alpha1
+  kind: Application
+  metadata:
+    name: configuration
+    namespace: argocd
+  spec:
+    destination:
+      server: https://kubernetes.default.svc
+    project: default
+    source:
+      path: configuration
+      repoURL: https://github.com/melak-cmd/crossplane-gitlab-provider.git
+      targetRevision: HEAD
+    syncPolicy:
+      automated:
+        prune: true
+      retry:
+        backoff:
+          duration: 5s
+          factor: 2
+          maxDuration: 0m10s
+        limit: 2
+      syncOptions:
+      - ApplyOutOfSyncOnly=true
+kind: List
+metadata:
+  resourceVersion: ""
