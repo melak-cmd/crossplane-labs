@@ -51,7 +51,7 @@ install_crossplane_cli :
 ifdef CROSSPLANE_CLI
 	@echo "Crossplane CLI already installed"
 else
-	@curl -sL https://raw.githubusercontent.com/crossplane/crossplane/release-1.5/install.sh | sh
+	@curl -sL https://raw.githubusercontent.com/crossplane/crossplane/release-1.9/install.sh | sh
 endif
 
 setup_k8s :
