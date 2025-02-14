@@ -20,6 +20,10 @@ else
 	@brew install kind
 endif
 
+install_helm :
+	@echo "Installing Helm"
+	@curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
 create_kind_cluster :
 	@echo "Creating kind cluster"
 	@kind create cluster --name crossplane-cluster 
@@ -45,7 +49,7 @@ CROSSPLANE_CLI := $(shell kubectl crossplane --version 2>/dev/null)
 
 install_crossplane_cli :
 ifdef CROSSPLANE_CLI
-	@echo "Crssplane CLI already installed"
+	@echo "Crossplane CLI already installed"
 else
 	@curl -sL https://raw.githubusercontent.com/crossplane/crossplane/release-1.5/install.sh | sh
 endif
@@ -59,5 +63,5 @@ setup_k8s :
 cleanup :
 	@kind delete clusters crossplane-cluster
 
-local_k8s : install_kind_linux create_kind_cluster_with_ingress install_crossplane install_crossplane_cli setup_k8s
+local_k8s : install_kind_linux install_helm create_kind_cluster_with_ingress install_crossplane install_crossplane_cli setup_k8s
 
