@@ -56,9 +56,14 @@ endif
 
 setup_k8s :
 	@echo "Setting up Kubernetes provider for local cluster"
-	@kubectl apply -f ./k8s-applications/kubernetes-provider-kind.yaml
-	@kubectl wait provider.pkg.crossplane.io/crossplane-provider-kubernetes --for condition=HEALTHY=True --timeout 1m
+	@kubectl apply -f ./k8s-applications/platforme-ops/providers.yaml
+	@kubectl wait provider.pkg.crossplane.io/provider-kubernetes --for condition=HEALTHY=True --timeout 1m
 	@echo "Provider Kubernetes configured"
+	@kubectl apply -f ./k8s-applications/platforme-ops/functions.yaml
+	@kubectl wait function.pkg.crossplane.io/function-patch-and-transform --for condition=HEALTHY=True --timeout 1m
+	@kubectl wait function.pkg.crossplane.io/function-auto-ready --for condition=HEALTHY=True --timeout 1m
+	@kubectl wait function.pkg.crossplane.io/function-go-templating --for condition=HEALTHY=True --timeout 1m
+	@echo "Functions configured"
 
 cleanup :
 	@kind delete clusters crossplane-cluster

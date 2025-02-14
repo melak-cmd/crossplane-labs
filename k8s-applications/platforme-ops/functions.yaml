@@ -2,8 +2,6 @@
 apiVersion: pkg.crossplane.io/v1beta1
 kind: Function
 metadata:
-  labels:
-    argocd.argoproj.io/instance: crossplane
   name: function-patch-and-transform
 spec:
   ignoreCrossplaneConstraints: false
@@ -11,18 +9,16 @@ spec:
   packagePullPolicy: IfNotPresent
   revisionActivationPolicy: Automatic
   revisionHistoryLimit: 1
-  runtimeConfigRef:
-    apiVersion: pkg.crossplane.io/v1beta1
-    kind: DeploymentRuntimeConfig
-    name: default
+  # runtimeConfigRef:
+  #   apiVersion: pkg.crossplane.io/v1beta1
+  #   kind: DeploymentRuntimeConfig
+  #   name: default
   skipDependencyResolution: false
 
 ---
 apiVersion: pkg.crossplane.io/v1beta1
 kind: Function
 metadata:
-  labels:
-    argocd.argoproj.io/instance: crossplane
   name: function-go-templating
 spec:
   ignoreCrossplaneConstraints: false
@@ -30,10 +26,10 @@ spec:
   packagePullPolicy: IfNotPresent
   revisionActivationPolicy: Automatic
   revisionHistoryLimit: 1
-  runtimeConfigRef:
-    apiVersion: pkg.crossplane.io/v1beta1
-    kind: DeploymentRuntimeConfig
-    name: default
+  # runtimeConfigRef:
+  #   apiVersion: pkg.crossplane.io/v1beta1
+  #   kind: DeploymentRuntimeConfig
+  #   name: default
   skipDependencyResolution: false
 
 ---

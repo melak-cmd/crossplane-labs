@@ -10,8 +10,8 @@ spec:
   packagePullPolicy: IfNotPresent
   revisionActivationPolicy: Automatic
   revisionHistoryLimit: 1
-  runtimeConfigRef:
-    apiVersion: pkg.crossplane.io/v1beta1
-    kind: DeploymentRuntimeConfig
-    name: provider-kubernetes
+  # runtimeConfigRef:
+  #   apiVersion: pkg.crossplane.io/v1beta1
+  #   kind: DeploymentRuntimeConfig
+  #   name: provider-kubernetes
   skipDependencyResolution: false
