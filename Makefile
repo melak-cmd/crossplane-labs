@@ -8,7 +8,7 @@ install_kind_linux :
 ifdef KIND_VERSION
 	@echo "Found version $(KIND_VERSION)"
 else
-	@curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.10.0/kind-linux-amd64
+	@curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.27.0/kind-linux-amd64
 	@chmod +x ./kind
 	@mv ./kind /bin/kind
 endif
