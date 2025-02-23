@@ -8,5 +8,5 @@ RUN apk add --no-cache curl docker-cli git && \
     mv ./kubectl /usr/local/bin/kubectl && \
     curl -L https://github.com/kubernetes-sigs/kind/releases/download/v${KIND_VERSION}/kind-linux-amd64 -o /usr/local/bin/kind && \
     chmod +x /usr/local/bin/kind && \
-    curl -sL "https://raw.githubusercontent.com/crossplane/crossplane/main/install.sh" | sh && \
+    curl -sL "https://raw.githubusercontent.com/crossplane/crossplane/main/install.sh" | sh &&  mv crossplane /usr/local/bin && \
     rm -rf /var/cache/apk/*
