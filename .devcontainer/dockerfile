@@ -10,3 +10,4 @@ RUN apk add --no-cache curl docker-cli git && \
     chmod +x /usr/local/bin/kind && \
     curl -sL "https://raw.githubusercontent.com/crossplane/crossplane/main/install.sh" | sh &&  mv crossplane /usr/local/bin && \
     rm -rf /var/cache/apk/*
+RUN apk add --no-cache make
