@@ -1,6 +1,6 @@
 FROM alpine:latest 
 
-ARG KIND_VERSION=0.14.0
+ARG KIND_VERSION=0.18.0
 
 RUN apk add --no-cache curl docker-cli git && \
     curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && \
