@@ -1,13 +1,22 @@
+# Use the latest version of Alpine Linux as the base image
 FROM alpine:latest 
 
+# Define the version of KIND to be installed
 ARG KIND_VERSION=0.18.0
 
+# Install necessary packages and tools
 RUN apk add --no-cache curl docker-cli git && \
+    # Download and install kubectl
     curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && \
     chmod +x ./kubectl && \
     mv ./kubectl /usr/local/bin/kubectl && \
+    # Download and install KIND
     curl -L https://github.com/kubernetes-sigs/kind/releases/download/v${KIND_VERSION}/kind-linux-amd64 -o /usr/local/bin/kind && \
     chmod +x /usr/local/bin/kind && \
+    # Download and install Crossplane
     curl -sL "https://raw.githubusercontent.com/crossplane/crossplane/main/install.sh" | sh &&  mv crossplane /usr/local/bin && \
+    # Clean up
     rm -rf /var/cache/apk/*
+
+# Install make
 RUN apk add --no-cache make
