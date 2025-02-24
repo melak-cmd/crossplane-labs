@@ -4,7 +4,7 @@
     "name": "k8s",
     "build": {
       "dockerfile": "dockerfile",
-      "args": { "KIND_VERSION": "0.14.0" }
+      "args": { "KIND_VERSION": "0.18.0" }
     },
     "mounts": ["type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock"],
   

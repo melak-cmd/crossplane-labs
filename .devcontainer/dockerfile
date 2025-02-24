@@ -20,3 +20,4 @@ RUN apk add --no-cache curl docker-cli git && \
 
 # Install make
 RUN apk add --no-cache make
+RUN apk add helm
