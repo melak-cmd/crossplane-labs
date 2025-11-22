@@ -1,18 +1,18 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.162.0/containers/javascript-node
 {
-    "name": "k8s",
+    "name": "crossplane",
     "build": {
       "dockerfile": "dockerfile",
       "args": { "KIND_VERSION": "0.18.0" }
     },
     "mounts": ["type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock"],
-  
+
     // Set *default* container specific settings.json values on container create.
     "settings": {
       "terminal.integrated.shell.linux": "/bin/sh"
     },
-  
+
     // Add the IDs of extensions you want installed when the container is created.
     "extensions": [
       "dbaeumer.vscode-eslint",
@@ -24,13 +24,13 @@
       "esbenp.prettier-vscode",
       "GitHub.copilot" // Added GitHub Copilot extension
     ],
-  
+
     // Use 'forwardPorts' to make a list of ports inside the container available locally.
     // "forwardPorts": [],
-  
+
     // Use 'postCreateCommand' to run commands after the container is created.
     // "postCreateCommand": "yarn install",
-  
+
     // Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
     "remoteUser": "root"
 }
