@@ -1,5 +1,5 @@
 # Use the latest version of Alpine Linux as the base image
-FROM alpine:latest 
+FROM ubuntu:latest 
 
 # Define the version of KIND to be installed
 ARG KIND_VERSION=0.18.0
