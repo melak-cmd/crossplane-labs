@@ -1,99 +1,38 @@
-# Crossplane Labs Makefile
-# Usage: make help
-
-# Variables
 CLUSTER_NAME ?= crossplane-labs
-K3D_CONFIG ?= clusters/k3d.yaml
-CROSSPLANE_VERSION ?= 2.3.3
-KUBERNETES_PROVIDER_VERSION ?= v1.3.0
-HELM_PROVIDER_VERSION ?= v1.3.0
-PATCH_AND_TRANSFORM_VERSION ?= v0.10.9
-AUTO_READY_VERSION ?= v0.7.0
+NAMESPACE ?= platform
 
-# Colors
-GREEN := \033[0;32m
-YELLOW := \033[0;33m
-NC := \033[0m
-
-.PHONY: help create-cluster delete-cluster install-crossplane install-providers install-functions deploy-xrds deploy-compositions deploy-app delete-app status setup teardown
+.PHONY: help create-cluster delete-cluster install-cnpg deploy delete setup teardown \
+	build-xpkg uptest status
 
 help: ## Show this help
-	@echo "$(GREEN)Crossplane Labs$(NC)"
-	@echo ""
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "$(YELLOW)%-25s$(NC) %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "%-25s %s\n", $$1, $$2}'
 
 create-cluster: ## Create k3d cluster
-	@echo "$(GREEN)Creating k3d cluster $(CLUSTER_NAME)...$(NC)"
-	k3d cluster create $(CLUSTER_NAME) --config $(K3D_CONFIG)
+	k3d cluster create $(CLUSTER_NAME) --config clusters/k3d.yaml
 
 delete-cluster: ## Delete k3d cluster
-	@echo "$(YELLOW)Deleting k3d cluster $(CLUSTER_NAME)...$(NC)"
 	k3d cluster delete $(CLUSTER_NAME)
 
-install-crossplane: ## Install Crossplane via Helm
-	@echo "$(GREEN)Installing Crossplane $(CROSSPLANE_VERSION)...$(NC)"
-	helm repo add crossplane-stable https://charts.crossplane.io/stable --force-update
+install-cnpg: ## Install CloudNativePG operator
+	helm repo add cnpg https://cloudnative-pg.github.io/charts --force-update
 	helm repo update
-	helm upgrade --install crossplane crossplane-stable/crossplane \
-		--namespace crossplane-system \
-		--create-namespace \
-		--version $(CROSSPLANE_VERSION) \
-		--wait
+	helm upgrade --install cnpg cnpg/cloudnative-pg \
+		--namespace cnpg-system --create-namespace --wait
 
-install-providers: ## Apply provider configurations
-	@echo "$(GREEN)Applying provider configurations...$(NC)"
-	kubectl apply -f crossplane/providers/
-
-install-functions: ## Apply function configurations
-	@echo "$(GREEN)Applying function configurations...$(NC)"
+deploy: ## Deploy XRDs, Compositions, functions, namespace and ProviderConfig
+	kubectl apply -R -f apis/
 	kubectl apply -f crossplane/functions/
+	kubectl create namespace $(NAMESPACE) --dry-run=client -o yaml | kubectl apply -f -
+	kubectl apply -f crossplane/providerconfigs/
 
-deploy-xrds: ## Deploy CompositeResourceDefinitions
-	@echo "$(GREEN)Deploying XRDs...$(NC)"
-	kubectl apply -f crossplane/xrds/
+delete: ## Delete application and database XRs
+	kubectl delete -f examples/ --recursive --ignore-not-found
 
-deploy-compositions: ## Deploy Compositions
-	@echo "$(GREEN)Deploying Compositions...$(NC)"
-	kubectl apply -f crossplane/compositions/
-
-deploy-app: deploy-xrds deploy-compositions ## Deploy application XR
-	@echo "$(GREEN)Deploying application...$(NC)"
-	kubectl apply -f apps/
-
-delete-app: ## Delete application XR
-	@echo "$(YELLOW)Deleting application...$(NC)"
-	kubectl delete -f apps/ --ignore-not-found
-
-status: ## Show cluster and Crossplane status
-	@echo "$(GREEN)Cluster Status:$(NC)"
-	k3d cluster list
-	@echo ""
-	@echo "$(GREEN)Pods:$(NC)"
-	kubectl get pods -n crossplane-system 2>/dev/null || echo "Crossplane not installed"
-	@echo ""
-	@echo "$(GREEN)Providers:$(NC)"
-	kubectl get providers 2>/dev/null || echo "No providers installed"
-	@echo ""
-	@echo "$(GREEN)Functions:$(NC)"
-	kubectl get functions 2>/dev/null || echo "No functions installed"
-	@echo ""
-	@echo "$(GREEN)XRDs:$(NC)"
-	kubectl get xrds 2>/dev/null || echo "No XRDs deployed"
-	@echo ""
-	@echo "$(GREEN)Compositions:$(NC)"
-	kubectl get compositions 2>/dev/null || echo "No Compositions deployed"
-	@echo ""
-	@echo "$(GREEN)Apps:$(NC)"
-	kubectl get apps -A 2>/dev/null || echo "No apps deployed"
-
-setup: create-cluster install-crossplane install-providers install-functions ## Full setup: cluster + Crossplane + providers + functions
-	@echo "$(GREEN)Setup complete!$(NC)"
-
-teardown: delete-app delete-cluster ## Delete app and cluster
-	@echo "$(GREEN)Teardown complete!$(NC)"
+build-xpkg: ## Build Crossplane Configuration Package
+	crossplane xpkg build --package-root=. --examples-root="./examples" \
+		--ignore=".github/*,clusters/*,test/*,Makefile,.gitignore,.git" --verbose
 
 uptest: ## Run e2e tests with uptest
-	@echo "$(GREEN)Running uptest e2e tests...$(NC)"
 	KUBECTL=kubectl CROSSPLANE_NAMESPACE=crossplane-system \
 	CHAINSAW=$$(which chainsaw) \
 	uptest e2e test/uptest/app.yaml \
@@ -101,8 +40,16 @@ uptest: ## Run e2e tests with uptest
 		--default-timeout 300s \
 		--skip-import
 
-uptest-render: ## Render uptest test cases without running
-	@echo "$(GREEN)Rendering uptest test cases...$(NC)"
-	uptest e2e test/uptest/app.yaml \
-		--setup-script test/uptest/setup.sh \
-		--render-only
+status: ## Show cluster and Crossplane status
+	k3d cluster list
+	@echo ""
+	kubectl get pods -n crossplane-system 2>/dev/null || echo "Crossplane not installed"
+	@echo ""
+	kubectl get xrds compositions functions providers -A 2>/dev/null || true
+	@echo ""
+	kubectl get apps databases -A 2>/dev/null || echo "No apps or databases deployed"
+
+setup: create-cluster install-cnpg deploy ## Full cluster setup
+	kubectl wait --for=condition=Ready pods --all -n crossplane-system --timeout=180s
+
+teardown: delete delete-cluster ## Delete resources and cluster

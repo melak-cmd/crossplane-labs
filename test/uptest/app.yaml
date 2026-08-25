@@ -2,7 +2,7 @@ apiVersion: kaonix.com/v1alpha1
 kind: App
 metadata:
   name: uptest-app
-  namespace: a-team
+  namespace: platform
   labels:
     app-owner: uptest
   annotations:
@@ -14,6 +14,24 @@ spec:
       matchLabels:
         type: frontend
   parameters:
-    namespace: a-team
+    namespace: platform
     image: vfarcic/devops-toolkit-series:4.0.0
     host: uptest-app.127.0.0.1.nip.io
+---
+apiVersion: kaonix.com/v1alpha1
+kind: Database
+metadata:
+  name: uptest-db
+  namespace: platform
+  labels:
+    app-owner: uptest
+  annotations:
+    uptest.upbound.io/timeout: "300"
+spec:
+  id: uptest-db
+  parameters:
+    namespace: platform
+    database: uptest
+    version: "16"
+    size: small
+    instances: 1

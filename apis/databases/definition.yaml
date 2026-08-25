@@ -1,0 +1,88 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: databases.kaonix.com
+spec:
+  scope: Namespaced
+  defaultCompositeDeletePolicy: Background
+  defaultCompositionRef:
+    name: database-cnpg
+  defaultCompositionUpdatePolicy: Automatic
+  group: kaonix.com
+  names:
+    kind: Database
+    plural: databases
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.host
+      name: host
+      type: string
+    - jsonPath: .status.port
+      name: port
+      type: integer
+    - jsonPath: .status.dbName
+      name: db
+      type: string
+    name: v1alpha1
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            properties:
+              id:
+                description: Unique identifier for this database.
+                type: string
+              parameters:
+                properties:
+                  namespace:
+                    default: default
+                    description: The namespace for the database resources.
+                    type: string
+                  database:
+                    default: app
+                    description: The name of the database to create.
+                    type: string
+                  version:
+                    default: "16"
+                    description: PostgreSQL major version (e.g., 13, 14, 15, 16).
+                    type: string
+                  size:
+                    default: small
+                    description: >
+                      Predefined size preset. Supported values are `small`,
+                      `medium`, and `large`.
+                    type: string
+                  storageSize:
+                    description: >
+                      Explicit PVC storage size (e.g., 1Gi). Overrides the
+                      size preset when set.
+                    type: string
+                  instances:
+                    default: 1
+                    description: Number of PostgreSQL instances (replicas).
+                    type: integer
+                required:
+                - namespace
+                type: object
+            required:
+            - id
+            - parameters
+            type: object
+          status:
+            properties:
+              host:
+                description: Internal Kubernetes Service address.
+                type: string
+              port:
+                description: PostgreSQL port.
+                type: integer
+              dbName:
+                description: Name of the database.
+                type: string
+              secretName:
+                description: Name of the Secret containing credentials.
+                type: string
+            type: object
+        type: object
+    served: true
