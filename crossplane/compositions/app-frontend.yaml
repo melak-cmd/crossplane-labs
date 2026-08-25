@@ -10,54 +10,75 @@ spec:
     kind: App
   mode: Pipeline
   pipeline:
-  - step: patch-and-transform
+  - step: render-templates
     functionRef:
-      name: function-patch-and-transform
+      name: function-go-templating
     input:
-      apiVersion: pt.fn.crossplane.io/v1beta1
-      kind: Resources
-      patchSets:
-      - name: metadata
-        patches:
-        - fromFieldPath: metadata.labels
-          type: FromCompositeFieldPath
-      resources:
-      - base:
+      apiVersion: gotemplating.fn.crossplane.io/v1beta1
+      kind: GoTemplate
+      source: Inline
+      options:
+        - missingkey=error
+      inline:
+        template: |
+          {{ $id := .observed.composite.resource.spec.id }}
+          {{ $namespace := .observed.composite.resource.spec.parameters.namespace }}
+          {{ $image := .observed.composite.resource.spec.parameters.image }}
+          {{ $port := .observed.composite.resource.spec.parameters.port }}
+          {{ $host := .observed.composite.resource.spec.parameters.host }}
+          ---
           apiVersion: kubernetes.m.crossplane.io/v1alpha1
           kind: ProviderConfig
+          metadata:
+            name: {{ $id }}
+            annotations:
+              {{ setResourceNameAnnotation "provider-config" }}
           spec:
             credentials:
               source: InjectedIdentity
-        name: kubernetes
-        patches:
-        - fromFieldPath: spec.id
-          toFieldPath: metadata.name
-          type: FromCompositeFieldPath
-        readinessChecks:
-        - type: None
-      - base:
+          ---
           apiVersion: kubernetes.m.crossplane.io/v1alpha1
           kind: Object
+          metadata:
+            name: {{ $id }}-deployment
+            namespace: {{ $namespace }}
+            annotations:
+              {{ setResourceNameAnnotation "deployment" }}
+            labels:
+              app: {{ $id }}
           spec:
             forProvider:
               manifest:
                 apiVersion: apps/v1
                 kind: Deployment
+                metadata:
+                  name: {{ $id }}
+                  namespace: {{ $namespace }}
+                  labels:
+                    app: {{ $id }}
                 spec:
+                  replicas: 2
+                  selector:
+                    matchLabels:
+                      app: {{ $id }}
                   template:
+                    metadata:
+                      labels:
+                        app: {{ $id }}
                     spec:
                       containers:
-                      - livenessProbe:
+                      - name: frontend
+                        image: {{ $image }}
+                        ports:
+                        - containerPort: {{ $port }}
+                        livenessProbe:
                           httpGet:
                             path: /
-                            port: 80
-                        name: frontend
-                        ports:
-                        - containerPort: 80
+                            port: {{ $port }}
                         readinessProbe:
                           httpGet:
                             path: /
-                            port: 80
+                            port: {{ $port }}
                         resources:
                           limits:
                             cpu: 250m
@@ -67,203 +88,112 @@ spec:
                             memory: 128Mi
             providerConfigRef:
               kind: ProviderConfig
-        name: deployment
-        patches:
-        - fromFieldPath: spec.id
-          toFieldPath: metadata.name
-          transforms:
-          - string:
-              fmt: '%s-deployment'
-              type: Format
-            type: string
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.forProvider.manifest.metadata.name
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.parameters.namespace
-          toFieldPath: spec.forProvider.manifest.metadata.namespace
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.forProvider.manifest.metadata.labels.app
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.forProvider.manifest.spec.selector.matchLabels.app
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.forProvider.manifest.spec.template.metadata.labels.app
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.parameters.image
-          toFieldPath: spec.forProvider.manifest.spec.template.spec.containers[0].image
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.parameters.port
-          toFieldPath: spec.forProvider.manifest.spec.template.spec.containers[0].ports[0].containerPort
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.parameters.port
-          toFieldPath: spec.forProvider.manifest.spec.template.spec.containers[0].livenessProbe.httpGet.port
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.parameters.port
-          toFieldPath: spec.forProvider.manifest.spec.template.spec.containers[0].readinessProbe.httpGet.port
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.providerConfigRef.name
-          type: FromCompositeFieldPath
-        readinessChecks:
-        - type: None
-      - base:
+              name: {{ $id }}
+          ---
           apiVersion: kubernetes.m.crossplane.io/v1alpha1
           kind: Object
+          metadata:
+            name: {{ $id }}-service
+            namespace: {{ $namespace }}
+            annotations:
+              {{ setResourceNameAnnotation "service" }}
+            labels:
+              app: {{ $id }}
           spec:
             forProvider:
               manifest:
                 apiVersion: v1
                 kind: Service
+                metadata:
+                  name: {{ $id }}
+                  namespace: {{ $namespace }}
+                  labels:
+                    app: {{ $id }}
                 spec:
+                  type: ClusterIP
+                  selector:
+                    app: {{ $id }}
                   ports:
                   - name: http
-                    port: 80
+                    port: {{ $port }}
+                    targetPort: {{ $port }}
                     protocol: TCP
-                    targetPort: 80
-                  type: ClusterIP
             providerConfigRef:
               kind: ProviderConfig
-        name: service
-        patches:
-        - fromFieldPath: spec.id
-          toFieldPath: metadata.name
-          transforms:
-          - string:
-              fmt: '%s-service'
-              type: Format
-            type: string
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.forProvider.manifest.metadata.name
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.parameters.namespace
-          toFieldPath: spec.forProvider.manifest.metadata.namespace
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.forProvider.manifest.metadata.labels.app
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.forProvider.manifest.spec.selector.app
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.parameters.port
-          toFieldPath: spec.forProvider.manifest.spec.ports[0].port
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.parameters.port
-          toFieldPath: spec.forProvider.manifest.spec.ports[0].targetPort
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.providerConfigRef.name
-          type: FromCompositeFieldPath
-        readinessChecks:
-        - type: None
-      - base:
+              name: {{ $id }}
+          ---
           apiVersion: kubernetes.m.crossplane.io/v1alpha1
           kind: Object
+          metadata:
+            name: {{ $id }}-ingress
+            namespace: {{ $namespace }}
+            annotations:
+              {{ setResourceNameAnnotation "ingress" }}
+            labels:
+              app: {{ $id }}
           spec:
             forProvider:
               manifest:
                 apiVersion: networking.k8s.io/v1
                 kind: Ingress
                 metadata:
+                  name: {{ $id }}
+                  namespace: {{ $namespace }}
+                  labels:
+                    app: {{ $id }}
                   annotations:
                     ingress.kubernetes.io/ssl-redirect: "false"
                 spec:
                   rules:
-                  - host: devopstoolkitseries.com
+                  - host: {{ $host }}
                     http:
                       paths:
-                      - backend:
-                          service:
-                            name: devops-toolkit
-                            port:
-                              number: 80
-                        path: /
+                      - path: /
                         pathType: ImplementationSpecific
+                        backend:
+                          service:
+                            name: {{ $id }}
+                            port:
+                              number: {{ $port }}
             providerConfigRef:
               kind: ProviderConfig
-        name: ingress
-        patches:
-        - fromFieldPath: spec.id
-          toFieldPath: metadata.name
-          transforms:
-          - string:
-              fmt: '%s-ingress'
-              type: Format
-            type: string
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.forProvider.manifest.metadata.name
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.parameters.namespace
-          toFieldPath: spec.forProvider.manifest.metadata.namespace
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.forProvider.manifest.metadata.labels.app
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.parameters.host
-          toFieldPath: spec.forProvider.manifest.spec.rules[0].host
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.forProvider.manifest.spec.rules[0].http.paths[0].backend.service.name
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.parameters.port
-          toFieldPath: spec.forProvider.manifest.spec.rules[0].http.paths[0].backend.service.port.number
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.providerConfigRef.name
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.forProvider.manifest.spec.rules[0].host
-          toFieldPath: status.host
-          type: ToCompositeFieldPath
-        readinessChecks:
-        - type: None
-      - base:
+              name: {{ $id }}
+          ---
           apiVersion: kubernetes.m.crossplane.io/v1alpha1
           kind: Object
+          metadata:
+            name: {{ $id }}-hpa
+            namespace: {{ $namespace }}
+            annotations:
+              {{ setResourceNameAnnotation "hpa" }}
+            labels:
+              app: {{ $id }}
           spec:
             forProvider:
               manifest:
                 apiVersion: autoscaling/v1
                 kind: HorizontalPodAutoscaler
+                metadata:
+                  name: {{ $id }}
+                  namespace: {{ $namespace }}
+                  labels:
+                    app: {{ $id }}
                 spec:
-                  maxReplicas: 6
-                  minReplicas: 2
                   scaleTargetRef:
                     apiVersion: apps/v1
                     kind: Deployment
+                    name: {{ $id }}
+                  minReplicas: 2
+                  maxReplicas: 6
                   targetCPUUtilizationPercentage: 80
             providerConfigRef:
               kind: ProviderConfig
-        name: hpa
-        patches:
-        - fromFieldPath: spec.id
-          toFieldPath: metadata.name
-          transforms:
-          - string:
-              fmt: '%s-hpa'
-              type: Format
-            type: string
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.forProvider.manifest.metadata.name
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.parameters.namespace
-          toFieldPath: spec.forProvider.manifest.metadata.namespace
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.forProvider.manifest.metadata.labels.app
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.forProvider.manifest.spec.scaleTargetRef.name
-          type: FromCompositeFieldPath
-        - fromFieldPath: spec.id
-          toFieldPath: spec.providerConfigRef.name
-          type: FromCompositeFieldPath
-        readinessChecks:
-        - type: None
+              name: {{ $id }}
+          ---
+          apiVersion: kaonix.com/v1alpha1
+          kind: App
+          status:
+            host: {{ $host }}
   - step: automatically-detect-ready-composed-resources
     functionRef:
       name: function-auto-ready
