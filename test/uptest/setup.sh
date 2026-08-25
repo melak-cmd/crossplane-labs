@@ -16,6 +16,9 @@ kubectl apply -f "${ROOT_DIR}/crossplane/functions/"
 echo "Waiting for Crossplane pods to be ready..."
 kubectl wait --for=condition=Ready pods --all -n crossplane-system --timeout=120s
 
+echo "Waiting for provider-kubernetes CRDs..."
+kubectl wait --for=condition=Established crd/providerconfigs.kubernetes.m.crossplane.io --timeout=120s
+
 echo "Creating a-team namespace..."
 kubectl create namespace a-team --dry-run=client -o yaml | kubectl apply -f -
 
