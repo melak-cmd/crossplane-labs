@@ -1,0 +1,19 @@
+apiVersion: meta.pkg.crossplane.io/v1alpha1
+kind: Configuration
+metadata:
+  name: kaonix-platform
+  annotations:
+    meta.crossplane.io/maintainer: Kaonix
+    meta.crossplane.io/source: github.com/melak-cmd/crossplane-labs
+    meta.crossplane.io/license: Apache-2.0
+    meta.crossplane.io/description: |
+      Kaonix platform configuration with app and database compositions.
+    meta.crossplane.io/readme: |
+      Featuring Compositions for frontend apps (Deployment, Service, Ingress, HPA)
+      and PostgreSQL databases via CloudNativePG.
+spec:
+  dependsOn:
+  - function: ghcr.io/crossplane-contrib/function-go-templating
+    version: ">=v0.12.0"
+  - function: ghcr.io/crossplane-contrib/function-auto-ready
+    version: ">=v0.7.0"

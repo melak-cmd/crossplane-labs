@@ -1,0 +1,13 @@
+apiVersion: kaonix.com/v1alpha1
+kind: Database
+metadata:
+  name: devops-toolkit-db
+  namespace: a-team
+spec:
+  id: devops-toolkit-db
+  parameters:
+    namespace: a-team
+    database: devops-toolkit
+    version: "16"
+    size: small
+    instances: 1

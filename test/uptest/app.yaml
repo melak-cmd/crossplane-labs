@@ -17,3 +17,21 @@ spec:
     namespace: a-team
     image: vfarcic/devops-toolkit-series:4.0.0
     host: uptest-app.127.0.0.1.nip.io
+---
+apiVersion: kaonix.com/v1alpha1
+kind: Database
+metadata:
+  name: uptest-db
+  namespace: a-team
+  labels:
+    app-owner: uptest
+  annotations:
+    uptest.upbound.io/timeout: "300"
+spec:
+  id: uptest-db
+  parameters:
+    namespace: a-team
+    database: uptest
+    version: "16"
+    size: small
+    instances: 1

@@ -1,0 +1,76 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  labels:
+    type: database
+  name: database-cnpg
+spec:
+  compositeTypeRef:
+    apiVersion: kaonix.com/v1alpha1
+    kind: Database
+  mode: Pipeline
+  pipeline:
+  - step: render-templates
+    functionRef:
+      name: function-go-templating
+    input:
+      apiVersion: gotemplating.fn.crossplane.io/v1beta1
+      kind: GoTemplate
+      source: Inline
+      options:
+        - missingkey=error
+      inline:
+        template: |
+          {{ $id := .observed.composite.resource.spec.id }}
+          {{ $namespace := .observed.composite.resource.spec.parameters.namespace }}
+          {{ $database := .observed.composite.resource.spec.parameters.database }}
+          {{ $version := .observed.composite.resource.spec.parameters.version }}
+          {{ $size := .observed.composite.resource.spec.parameters.size }}
+          {{ $instances := .observed.composite.resource.spec.parameters.instances }}
+          {{ $storageSize := "1Gi" }}
+          {{ if index .observed.composite.resource.spec.parameters "storageSize" }}
+          {{ $storageSize = .observed.composite.resource.spec.parameters.storageSize }}
+          {{ end }}
+          ---
+          apiVersion: kubernetes.m.crossplane.io/v1alpha1
+          kind: Object
+          metadata:
+            name: {{ $id }}-cluster
+            namespace: {{ $namespace }}
+            annotations:
+              {{ setResourceNameAnnotation "cluster" }}
+          spec:
+            forProvider:
+              manifest:
+                apiVersion: postgresql.cnpg.io/v1
+                kind: Cluster
+                metadata:
+                  name: {{ $id }}
+                  namespace: {{ $namespace }}
+                spec:
+                  instances: {{ $instances }}
+                  postgresql:
+                    parameters:
+                      max_connections: "200"
+                    pg_hba:
+                    - host all all 10.244.0.0/16 trust
+                  bootstrap:
+                    initdb:
+                      database: {{ $database }}
+                      owner: {{ $id }}
+                  storage:
+                    size: {{ $storageSize }}
+            providerConfigRef:
+              kind: ProviderConfig
+              name: default
+          ---
+          apiVersion: kaonix.com/v1alpha1
+          kind: Database
+          status:
+            host: {{ $id }}-rw.{{ $namespace }}.svc
+            port: 5432
+            dbName: {{ $database }}
+            secretName: {{ $id }}-app
+  - step: automatically-detect-ready-composed-resources
+    functionRef:
+      name: function-auto-ready
