@@ -35,10 +35,10 @@ helm upgrade --install cnpg cnpg/cloudnative-pg \
 echo "Waiting for CNPG CRDs..."
 kubectl wait --for=condition=Established crd/clusters.postgresql.cnpg.io --timeout=60s
 
-echo "Creating a-team namespace..."
-kubectl create namespace a-team --dry-run=client -o yaml | kubectl apply -f -
+echo "Creating platform namespace..."
+kubectl create namespace platform --dry-run=client -o yaml | kubectl apply -f -
 
-echo "Creating default ProviderConfig in a-team..."
+echo "Creating default ProviderConfig in platform..."
 kubectl apply -f "${ROOT_DIR}/crossplane/providerconfigs/"
 
 echo "Setup complete."
