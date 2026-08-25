@@ -1,0 +1,196 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  labels:
+    type: network
+  name: network-fullstack
+spec:
+  compositeTypeRef:
+    apiVersion: kaonix.com/v1alpha1
+    kind: Network
+  mode: Pipeline
+  pipeline:
+  - step: render-templates
+    functionRef:
+      name: function-go-templating
+    input:
+      apiVersion: gotemplating.fn.crossplane.io/v1beta1
+      kind: GoTemplate
+      source: Inline
+      inline:
+        template: |
+          {{ $id := .observed.composite.resource.spec.id }}
+          {{ $ns := .observed.composite.resource.spec.parameters.namespace }}
+          {{ $app := .observed.composite.resource.spec.parameters.appName }}
+          {{ $ports := .observed.composite.resource.spec.parameters.ports }}
+          {{ $ingress := .observed.composite.resource.spec.parameters.ingress }}
+          {{ $netpol := .observed.composite.resource.spec.parameters.networkPolicy }}
+          {{ $dns := .observed.composite.resource.spec.parameters.dns }}
+          ---
+          apiVersion: kubernetes.m.crossplane.io/v1alpha1
+          kind: Object
+          metadata:
+            name: {{ $id }}-networkpolicy
+            namespace: {{ $ns }}
+            annotations:
+              {{ setResourceNameAnnotation "networkpolicy" }}
+            labels:
+              app: {{ $app }}
+          spec:
+            forProvider:
+              manifest:
+                apiVersion: networking.k8s.io/v1
+                kind: NetworkPolicy
+                metadata:
+                  name: {{ $id }}
+                  namespace: {{ $ns }}
+                  labels:
+                    app: {{ $app }}
+                spec:
+                  podSelector:
+                    matchLabels:
+                      app: {{ $app }}
+                  policyTypes:
+                  - Ingress
+                  - Egress
+                  {{ if and $netpol $netpol.ingress }}
+                  ingress:
+                  {{ range $cidr := $netpol.ingress }}
+                  - from:
+                    - ipBlock:
+                        cidr: {{ $cidr }}
+                  {{ end }}
+                  {{ else }}
+                  ingress: []
+                  {{ end }}
+                  {{ if and $netpol $netpol.egress }}
+                  egress:
+                  {{ range $cidr := $netpol.egress }}
+                  - to:
+                    - ipBlock:
+                        cidr: {{ $cidr }}
+                  {{ end }}
+                  {{ else }}
+                  egress: []
+                  {{ end }}
+            providerConfigRef:
+              kind: ProviderConfig
+              name: default
+          ---
+          apiVersion: kubernetes.m.crossplane.io/v1alpha1
+          kind: Object
+          metadata:
+            name: {{ $id }}-service
+            namespace: {{ $ns }}
+            annotations:
+              {{ setResourceNameAnnotation "service" }}
+            labels:
+              app: {{ $app }}
+          spec:
+            forProvider:
+              manifest:
+                apiVersion: v1
+                kind: Service
+                metadata:
+                  name: {{ $id }}
+                  namespace: {{ $ns }}
+                  labels:
+                    app: {{ $app }}
+                spec:
+                  selector:
+                    app: {{ $app }}
+                  ports:
+                  {{ range $p := $ports }}
+                  - name: port-{{ $p.port }}
+                    port: {{ $p.port }}
+                    targetPort: {{ $p.port }}
+                    protocol: {{ $p.protocol | default "TCP" }}
+                  {{ end }}
+            providerConfigRef:
+              kind: ProviderConfig
+              name: default
+          {{ if $dns }}
+          ---
+          apiVersion: kubernetes.m.crossplane.io/v1alpha1
+          kind: Object
+          metadata:
+            name: {{ $id }}-dns
+            namespace: {{ $ns }}
+            annotations:
+              {{ setResourceNameAnnotation "dns" }}
+            labels:
+              app: {{ $app }}
+          spec:
+            forProvider:
+              manifest:
+                apiVersion: v1
+                kind: Service
+                metadata:
+                  name: {{ $id }}-dns
+                  namespace: {{ $ns }}
+                  labels:
+                    app: {{ $app }}
+                spec:
+                  type: ExternalName
+                  externalName: {{ $dns }}
+            providerConfigRef:
+              kind: ProviderConfig
+              name: default
+          {{ end }}
+          {{ if $ingress }}
+          ---
+          apiVersion: kubernetes.m.crossplane.io/v1alpha1
+          kind: Object
+          metadata:
+            name: {{ $id }}-ingress
+            namespace: {{ $ns }}
+            annotations:
+              {{ setResourceNameAnnotation "ingress" }}
+            labels:
+              app: {{ $app }}
+          spec:
+            forProvider:
+              manifest:
+                apiVersion: networking.k8s.io/v1
+                kind: Ingress
+                metadata:
+                  name: {{ $id }}
+                  namespace: {{ $ns }}
+                  labels:
+                    app: {{ $app }}
+                  annotations:
+                    ingress.kubernetes.io/ssl-redirect: "false"
+                spec:
+                  {{ if $ingress.tlsSecret }}
+                  tls:
+                  - hosts:
+                    - {{ $ingress.host }}
+                    secretName: {{ $ingress.tlsSecret }}
+                  {{ end }}
+                  rules:
+                  - host: {{ $ingress.host }}
+                    http:
+                      paths:
+                      - path: {{ $ingress.path | default "/" }}
+                        pathType: ImplementationSpecific
+                        backend:
+                          service:
+                            name: {{ $id }}
+                            port:
+                              number: {{ (index $ports 0).port }}
+            providerConfigRef:
+              kind: ProviderConfig
+              name: default
+          {{ end }}
+          ---
+          apiVersion: kaonix.com/v1alpha1
+          kind: Network
+          status:
+            serviceName: {{ $id }}
+            {{ if $ingress }}
+            ingressHost: {{ $ingress.host }}
+            {{ end }}
+            networkPolicyName: {{ $id }}
+  - step: automatically-detect-ready-composed-resources
+    functionRef:
+      name: function-auto-ready

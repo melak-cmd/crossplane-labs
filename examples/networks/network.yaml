@@ -1,0 +1,23 @@
+apiVersion: kaonix.com/v1alpha1
+kind: Network
+metadata:
+  name: devops-toolkit-network
+  namespace: platform
+spec:
+  id: devops-toolkit-network
+  parameters:
+    namespace: platform
+    appName: devops-toolkit
+    ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 80
+    ingress:
+      host: devops-toolkit.127.0.0.1.nip.io
+      path: /
+    networkPolicy:
+      ingress:
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      egress:
+      - 0.0.0.0/0

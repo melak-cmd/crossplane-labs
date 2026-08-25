@@ -25,7 +25,6 @@ spec:
           {{ $namespace := .observed.composite.resource.spec.parameters.namespace }}
           {{ $image := .observed.composite.resource.spec.parameters.image }}
           {{ $port := .observed.composite.resource.spec.parameters.port }}
-          {{ $host := .observed.composite.resource.spec.parameters.host }}
           ---
           apiVersion: kubernetes.m.crossplane.io/v1alpha1
           kind: Object
@@ -83,75 +82,6 @@ spec:
           apiVersion: kubernetes.m.crossplane.io/v1alpha1
           kind: Object
           metadata:
-            name: {{ $id }}-service
-            namespace: {{ $namespace }}
-            annotations:
-              {{ setResourceNameAnnotation "service" }}
-            labels:
-              app: {{ $id }}
-          spec:
-            forProvider:
-              manifest:
-                apiVersion: v1
-                kind: Service
-                metadata:
-                  name: {{ $id }}
-                  namespace: {{ $namespace }}
-                  labels:
-                    app: {{ $id }}
-                spec:
-                  type: ClusterIP
-                  selector:
-                    app: {{ $id }}
-                  ports:
-                  - name: http
-                    port: {{ $port }}
-                    targetPort: {{ $port }}
-                    protocol: TCP
-            providerConfigRef:
-              kind: ProviderConfig
-              name: default
-          ---
-          apiVersion: kubernetes.m.crossplane.io/v1alpha1
-          kind: Object
-          metadata:
-            name: {{ $id }}-ingress
-            namespace: {{ $namespace }}
-            annotations:
-              {{ setResourceNameAnnotation "ingress" }}
-            labels:
-              app: {{ $id }}
-          spec:
-            forProvider:
-              manifest:
-                apiVersion: networking.k8s.io/v1
-                kind: Ingress
-                metadata:
-                  name: {{ $id }}
-                  namespace: {{ $namespace }}
-                  labels:
-                    app: {{ $id }}
-                  annotations:
-                    ingress.kubernetes.io/ssl-redirect: "false"
-                spec:
-                  rules:
-                  - host: {{ $host }}
-                    http:
-                      paths:
-                      - path: /
-                        pathType: ImplementationSpecific
-                        backend:
-                          service:
-                            name: {{ $id }}
-                            port:
-                              number: {{ $port }}
-            providerConfigRef:
-              kind: ProviderConfig
-              name: default
-          ---
-          apiVersion: kubernetes.m.crossplane.io/v1alpha1
-          kind: Object
-          metadata:
             name: {{ $id }}-hpa
             namespace: {{ $namespace }}
             annotations:
@@ -179,11 +109,6 @@ spec:
             providerConfigRef:
               kind: ProviderConfig
               name: default
-          ---
-          apiVersion: kaonix.com/v1alpha1
-          kind: App
-          status:
-            host: {{ $host }}
   - step: automatically-detect-ready-composed-resources
     functionRef:
       name: function-auto-ready

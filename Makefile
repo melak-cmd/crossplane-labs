@@ -2,7 +2,7 @@ CLUSTER_NAME ?= crossplane-labs
 NAMESPACE ?= platform
 
 .PHONY: help create-cluster delete-cluster install-cnpg deploy delete setup teardown \
-	build-xpkg uptest uptest-render render-app render-db status
+	build-xpkg uptest uptest-render render-app render-db render-network status
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "%-25s %s\n", $$1, $$2}'
@@ -53,6 +53,10 @@ render-app: ## Render App composition locally (requires Docker)
 
 render-db: ## Render Database composition locally (requires Docker)
 	crossplane render examples/databases/postgres.yaml apis/databases/composition.yaml \
+		crossplane/functions/functions.yaml -x
+
+render-network: ## Render Network composition locally (requires Docker)
+	crossplane render examples/networks/network.yaml apis/networks/composition.yaml \
 		crossplane/functions/functions.yaml -x
 
 status: ## Show cluster and Crossplane status

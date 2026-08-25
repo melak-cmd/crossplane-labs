@@ -16,7 +16,7 @@ spec:
   parameters:
     namespace: platform
     image: vfarcic/devops-toolkit-series:4.0.0
-    host: uptest-app.127.0.0.1.nip.io
+    port: 80
 ---
 apiVersion: kaonix.com/v1alpha1
 kind: App
@@ -36,8 +36,28 @@ spec:
   parameters:
     namespace: platform
     image: nginx:1.27-alpine
-    host: custom-port.127.0.0.1.nip.io
     port: 8080
+---
+apiVersion: kaonix.com/v1alpha1
+kind: Network
+metadata:
+  name: uptest-network
+  namespace: platform
+  labels:
+    app-owner: uptest
+  annotations:
+    uptest.upbound.io/timeout: "300"
+spec:
+  id: uptest-network
+  parameters:
+    namespace: platform
+    appName: uptest-app
+    ports:
+    - port: 80
+      protocol: TCP
+    ingress:
+      host: uptest-app.127.0.0.1.nip.io
+      path: /
 ---
 apiVersion: kaonix.com/v1alpha1
 kind: Database

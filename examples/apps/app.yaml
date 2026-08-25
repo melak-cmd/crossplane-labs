@@ -14,5 +14,4 @@ spec:
   parameters:
     namespace: platform
     image: vfarcic/devops-toolkit-series:4.0.0
-    host: devops-toolkit.127.0.0.1.nip.io
     port: 80

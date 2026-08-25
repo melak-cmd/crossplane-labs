@@ -1,15 +1,16 @@
 # Kaonix Platform Configuration
 
-A Crossplane v2 Configuration Package providing platform building blocks — deploy frontend apps and PostgreSQL databases with a single YAML manifest.
+A Crossplane v2 Configuration Package providing platform building blocks — deploy apps, networks, and PostgreSQL databases with a single YAML manifest.
 
 ## Features
 
 | Composition | Resources Managed |
 |---|---|
-| `App` (`app-frontend`) | Deployment, Service, Ingress, HPA |
+| `App` (`app-frontend`) | Deployment, HPA |
+| `Network` (`network-fullstack`) | NetworkPolicy, Service, Ingress, ExternalName DNS |
 | `Database` (`database-cnpg`) | CloudNativePG Cluster, Secret |
 
-Both XRDs use **namespaced scope** (`v2` API) so XRs live alongside your workloads.
+All XRDs use **namespaced scope** (`v2` API) so XRs live alongside your workloads.
 
 ## Prerequisites
 
@@ -30,10 +31,11 @@ make install-cnpg
 # 3. Deploy XRDs, Compositions, functions and provider config
 make deploy
 
-# 4. Deploy an example app
+# 4. Deploy an app + network
 kubectl apply -f examples/apps/app.yaml
+kubectl apply -f examples/networks/network.yaml
 
-# 5. Deploy an example database
+# 5. Deploy a database
 kubectl apply -f examples/databases/postgres.yaml
 ```
 
@@ -62,8 +64,33 @@ spec:
   parameters:
     namespace: platform
     image: nginx:1.27-alpine
-    host: my-app.127.0.0.1.nip.io
     port: 8080
+```
+
+### Network
+
+```yaml
+apiVersion: kaonix.com/v1alpha1
+kind: Network
+metadata:
+  name: my-app-network
+  namespace: platform
+spec:
+  id: my-app-network
+  parameters:
+    namespace: platform
+    appName: my-app
+    ports:
+    - port: 8080
+      protocol: TCP
+    ingress:
+      host: my-app.127.0.0.1.nip.io
+      path: /
+    networkPolicy:
+      ingress:
+      - 10.0.0.0/8
+      egress:
+      - 0.0.0.0/0
 ```
 
 ### Database
@@ -90,8 +117,9 @@ spec:
 ```
 crossplane-labs/
 ├── apis/
-│   ├── apps/               # App XRD + Composition
-│   └── databases/          # Database XRD + Composition
+│   ├── apps/               # App XRD + Composition (Deployment, HPA)
+│   ├── databases/          # Database XRD + Composition (CNPG Cluster)
+│   └── networks/           # Network XRD + Composition (NetworkPolicy, Service, Ingress, DNS)
 ├── crossplane/
 │   ├── functions/          # go-templating, auto-ready, patch-and-transform
 │   ├── providers/          # kubernetes, helm providers + DeploymentRuntimeConfig
@@ -100,11 +128,12 @@ crossplane-labs/
 │   └── k3d.yaml            # k3d cluster config
 ├── examples/
 │   ├── apps/               # sample App XR
-│   └── databases/          # sample Database XR
+│   ├── databases/          # sample Database XR
+│   └── networks/           # sample Network XR
 ├── test/
 │   └── uptest/
 │       ├── setup.sh        # e2e setup (installs CRDs, providers, CNPG, webhook check)
-│       └── app.yaml        # uptest manifest (4 resources, 300s timeout)
+│       └── app.yaml        # uptest manifest (5 resources, 300s timeout)
 ├── crossplane.yaml         # Configuration package metadata
 └── Makefile
 ```
@@ -135,6 +164,7 @@ Preview composed resources without a cluster:
 ```bash
 make render-app      # render App composition
 make render-db       # render Database composition
+make render-network  # render Network composition
 ```
 
 Or directly:
