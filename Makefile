@@ -95,6 +95,7 @@ teardown: delete-app delete-cluster ## Delete app and cluster
 uptest: ## Run e2e tests with uptest
 	@echo "$(GREEN)Running uptest e2e tests...$(NC)"
 	KUBECTL=kubectl CROSSPLANE_NAMESPACE=crossplane-system \
+	CHAINSAW=$$(which chainsaw) \
 	uptest e2e test/uptest/app.yaml \
 		--setup-script test/uptest/setup.sh \
 		--default-timeout 300s \
