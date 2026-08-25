@@ -1,72 +1,84 @@
-.PHONY : all install_kind_linux install_kind_mac create_kind_cluster setup_aws cleanup install_crossplane_cli
+# Crossplane Labs Makefile
+# Usage: make help
 
-default: all
+# Variables
+CLUSTER_NAME ?= crossplane-labs
+K3D_CONFIG ?= clusters/k3d.yaml
+CROSSPLANE_VERSION ?= 1.20.5
+KUBERNETES_PROVIDER_VERSION ?= v0.18.0
+HELM_PROVIDER_VERSION ?= v0.14.0
 
-KIND_VERSION := $(shell kind --version 2>/dev/null)
+# Colors
+GREEN := \033[0;32m
+YELLOW := \033[0;33m
+NC := \033[0m
 
-install_kind_linux : 
-ifdef KIND_VERSION
-	@echo "Found version $(KIND_VERSION)"
-else
-	@curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.27.0/kind-linux-amd64
-	@chmod +x ./kind
-	@mv ./kind /bin/kind
-endif
+.PHONY: help create-cluster delete-cluster install-crossplane install-providers deploy-claim delete-claim status
 
-install_kind_mac : 
-ifdef KIND_VERSION
-	@echo "Found version $(KIND_VERSION)"
-else
-	@brew install kind
-endif
+help: ## Show this help
+	@echo "$(GREEN)Crossplane Labs$(NC)"
+	@echo ""
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "$(YELLOW)%-25s$(NC) %s\n", $$1, $$2}'
 
-install_helm :
-	@echo "Installing Helm"
-	@curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+create-cluster: ## Create k3d cluster
+	@echo "$(GREEN)Creating k3d cluster $(CLUSTER_NAME)...$(NC)"
+	k3d cluster create $(CLUSTER_NAME) --config $(K3D_CONFIG)
 
-create_kind_cluster :
-	@echo "Creating kind cluster"
-	@kind create cluster --name crossplane-cluster 
-	@kind get kubeconfig --name crossplane-cluster
-	@kubectl config set-context kind-crossplane-cluster 
+delete-cluster: ## Delete k3d cluster
+	@echo "$(YELLOW)Deleting k3d cluster $(CLUSTER_NAME)...$(NC)"
+	k3d cluster delete $(CLUSTER_NAME)
 
-create_kind_cluster_with_ingress :
-	@echo "Creating kind cluster"
-	@kind create cluster --name crossplane-cluster --config=kind-config.yaml
-	@kind get kubeconfig --name crossplane-cluster
-	@kubectl config set-context kind-crossplane-cluster 
-	@kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+install-crossplane: ## Install Crossplane via Helm
+	@echo "$(GREEN)Installing Crossplane $(CROSSPLANE_VERSION)...$(NC)"
+	helm repo add crossplane-stable https://charts.crossplane.io/stable --force-update
+	helm repo update
+	helm upgrade --install crossplane crossplane-stable/crossplane \
+		--namespace crossplane-system \
+		--create-namespace \
+		--version $(CROSSPLANE_VERSION) \
+		--wait
 
-install_crossplane : 
-	@echo "Installing crossplane"
-	@kubectl create namespace crossplane-system
-	@helm repo add crossplane-stable https://charts.crossplane.io/stable
-	@helm repo upate
-	@helm install crossplane --namespace crossplane-system crossplane-stable/crossplane
-	@kubectl wait deployment.apps/crossplane --namespace crossplane-system --for condition=AVAILABLE=True --timeout 1m
+install-providers: ## Apply provider configurations
+	@echo "$(GREEN)Applying provider configurations...$(NC)"
+	kubectl apply -f crossplane/providers/
 
-CROSSPLANE_CLI := $(shell kubectl crossplane --version 2>/dev/null)
+deploy-xrds: ## Deploy CompositeResourceDefinitions
+	@echo "$(GREEN)Deploying XRDs...$(NC)"
+	kubectl apply -f crossplane/xrds/
 
-install_crossplane_cli :
-ifdef CROSSPLANE_CLI
-	@echo "Crossplane CLI already installed"
-else
-	@curl -sL https://raw.githubusercontent.com/crossplane/crossplane/release-1.9/install.sh | sh
-endif
+deploy-compositions: ## Deploy Compositions
+	@echo "$(GREEN)Deploying Compositions...$(NC)"
+	kubectl apply -f crossplane/compositions/
 
-setup_k8s :
-	@echo "Setting up Kubernetes provider for local cluster"
-	@kubectl apply -f ./k8s-applications/platforme-ops/providers.yaml
-	@kubectl wait provider.pkg.crossplane.io/provider-kubernetes --for condition=HEALTHY=True --timeout 1m
-	@echo "Provider Kubernetes configured"
-	@kubectl apply -f ./k8s-applications/platforme-ops/functions.yaml
-	@kubectl wait function.pkg.crossplane.io/function-patch-and-transform --for condition=HEALTHY=True --timeout 1m
-	@kubectl wait function.pkg.crossplane.io/function-auto-ready --for condition=HEALTHY=True --timeout 1m
-	@kubectl wait function.pkg.crossplane.io/function-go-templating --for condition=HEALTHY=True --timeout 1m
-	@echo "Functions configured"
+deploy-claim: deploy-xrds deploy-compositions ## Deploy application claim
+	@echo "$(GREEN)Deploying claim...$(NC)"
+	kubectl apply -f apps/
 
-cleanup :
-	@kind delete clusters crossplane-cluster
+delete-claim: ## Delete application claim
+	@echo "$(YELLOW)Deleting claim...$(NC)"
+	kubectl delete -f apps/ --ignore-not-found
 
-local_k8s : install_kind_linux install_helm create_kind_cluster_with_ingress install_crossplane install_crossplane_cli setup_k8s
+status: ## Show cluster and Crossplane status
+	@echo "$(GREEN)Cluster Status:$(NC)"
+	k3d cluster list
+	@echo ""
+	@echo "$(GREEN)Pods:$(NC)"
+	kubectl get pods -n crossplane-system 2>/dev/null || echo "Crossplane not installed"
+	@echo ""
+	@echo "$(GREEN)Providers:$(NC)"
+	kubectl get providers 2>/dev/null || echo "No providers installed"
+	@echo ""
+	@echo "$(GREEN)XRDs:$(NC)"
+	kubectl get xrds 2>/dev/null || echo "No XRDs deployed"
+	@echo ""
+	@echo "$(GREEN)Compositions:$(NC)"
+	kubectl get compositions 2>/dev/null || echo "No Compositions deployed"
+	@echo ""
+	@echo "$(GREEN)Claims:$(NC)"
+	kubectl get appclaims 2>/dev/null || echo "No Claims deployed"
 
+setup: create-cluster install-crossplane install-providers ## Full setup: cluster + Crossplane + providers
+	@echo "$(GREEN)Setup complete!$(NC)"
+
+teardown: delete-claim delete-cluster ## Delete claim and cluster
+	@echo "$(GREEN)Teardown complete!$(NC)"

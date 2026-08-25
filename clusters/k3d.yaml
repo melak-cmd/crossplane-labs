@@ -1,0 +1,15 @@
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: crossplane-labs
+servers: 1
+agents: 0
+options:
+  k3s:
+    extraArgs:
+      - arg: --disable=traefik
+        nodeFilters:
+          - server:0
+      - arg: --disable=servicelb
+        nodeFilters:
+          - server:0
