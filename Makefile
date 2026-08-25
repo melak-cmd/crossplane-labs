@@ -2,7 +2,7 @@ CLUSTER_NAME ?= crossplane-labs
 NAMESPACE ?= platform
 
 .PHONY: help create-cluster delete-cluster install-cnpg deploy delete setup teardown \
-	build-xpkg uptest status
+	build-xpkg uptest uptest-render status
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "%-25s %s\n", $$1, $$2}'
@@ -38,6 +38,14 @@ uptest: ## Run e2e tests with uptest
 		--setup-script test/uptest/setup.sh \
 		--default-timeout 300s \
 		--skip-import
+
+uptest-render: ## Render chainsaw test files without running them
+	KUBECTL=kubectl CROSSPLANE_NAMESPACE=crossplane-system CHAINSAW=chainsaw \
+	uptest e2e test/uptest/app.yaml \
+		--setup-script test/uptest/setup.sh \
+		--default-timeout 300s \
+		--skip-import \
+		--render-only
 
 status: ## Show cluster and Crossplane status
 	k3d cluster list
