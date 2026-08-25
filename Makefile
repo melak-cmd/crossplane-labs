@@ -33,9 +33,7 @@ build-xpkg: ## Build Crossplane Configuration Package
 		--ignore=".github/*,clusters/*,test/*,Makefile,.gitignore,.git" --verbose
 
 uptest: ## Run e2e tests with uptest
-	PATH="$(HOME)/go/bin:$$PATH" \
-	KUBECTL=kubectl CROSSPLANE_NAMESPACE=crossplane-system \
-	CHAINSAW=$$(which chainsaw) \
+	KUBECTL=kubectl CROSSPLANE_NAMESPACE=crossplane-system CHAINSAW=chainsaw \
 	uptest e2e test/uptest/app.yaml \
 		--setup-script test/uptest/setup.sh \
 		--default-timeout 300s \
