@@ -19,6 +19,27 @@ spec:
     host: uptest-app.127.0.0.1.nip.io
 ---
 apiVersion: kaonix.com/v1alpha1
+kind: App
+metadata:
+  name: uptest-app-custom-port
+  namespace: platform
+  labels:
+    app-owner: uptest
+  annotations:
+    uptest.upbound.io/timeout: "300"
+spec:
+  id: uptest-app-custom-port
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        type: frontend
+  parameters:
+    namespace: platform
+    image: nginx:1.27-alpine
+    host: custom-port.127.0.0.1.nip.io
+    port: 8080
+---
+apiVersion: kaonix.com/v1alpha1
 kind: Database
 metadata:
   name: uptest-db
@@ -35,3 +56,22 @@ spec:
     version: "16"
     size: small
     instances: 1
+---
+apiVersion: kaonix.com/v1alpha1
+kind: Database
+metadata:
+  name: uptest-db-multi
+  namespace: platform
+  labels:
+    app-owner: uptest
+  annotations:
+    uptest.upbound.io/timeout: "300"
+spec:
+  id: uptest-db-multi
+  parameters:
+    namespace: platform
+    database: uptest_multi
+    version: "16"
+    size: small
+    instances: 2
+    storageSize: 2Gi
