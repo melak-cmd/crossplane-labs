@@ -1,14 +1,16 @@
 apiVersion: kaonix.com/v1alpha1
-kind: AppClaim
+kind: App
 metadata:
   name: devops-toolkit
+  namespace: a-team
   labels:
     app-owner: vfarcic
 spec:
   id: devops-toolkit
-  compositionSelector:
-    matchLabels:
-      type: frontend
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        type: frontend
   parameters:
     namespace: a-team
     image: vfarcic/devops-toolkit-series:4.0.0

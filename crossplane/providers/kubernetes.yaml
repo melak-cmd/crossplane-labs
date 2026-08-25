@@ -4,7 +4,7 @@ kind: Provider
 metadata:
   name: crossplane-contrib-provider-kubernetes
 spec:
-  package: xpkg.upbound.io/crossplane-contrib/provider-kubernetes:v0.18.0
+  package: xpkg.crossplane.io/crossplane-contrib/provider-kubernetes:v1.3.0
   runtimeConfigRef:
     name: provider-kubernetes
 ---
@@ -30,8 +30,6 @@ spec:
           serviceAccountName: provider-kubernetes
           containers:
           - name: package-runtime
-            # args:
-            # - --debug
             resources:
               requests:
                 cpu: 100m
