@@ -1,0 +1,19 @@
+apiVersion: kaonix.com/v1alpha1
+kind: App
+metadata:
+  name: uptest-app
+  namespace: a-team
+  labels:
+    app-owner: uptest
+  annotations:
+    uptest.upbound.io/timeout: "300"
+spec:
+  id: uptest-app
+  crossplane:
+    compositionSelector:
+      matchLabels:
+        type: frontend
+  parameters:
+    namespace: a-team
+    image: vfarcic/devops-toolkit-series:4.0.0
+    host: uptest-app.127.0.0.1.nip.io

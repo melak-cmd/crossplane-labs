@@ -91,3 +91,17 @@ setup: create-cluster install-crossplane install-providers install-functions ## 
 
 teardown: delete-app delete-cluster ## Delete app and cluster
 	@echo "$(GREEN)Teardown complete!$(NC)"
+
+uptest: ## Run e2e tests with uptest
+	@echo "$(GREEN)Running uptest e2e tests...$(NC)"
+	KUBECTL=kubectl CROSSPLANE_NAMESPACE=crossplane-system \
+	uptest e2e test/uptest/app.yaml \
+		--setup-script test/uptest/setup.sh \
+		--default-timeout 300s \
+		--skip-import
+
+uptest-render: ## Render uptest test cases without running
+	@echo "$(GREEN)Rendering uptest test cases...$(NC)"
+	uptest e2e test/uptest/app.yaml \
+		--setup-script test/uptest/setup.sh \
+		--render-only

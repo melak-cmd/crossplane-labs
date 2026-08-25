@@ -28,16 +28,6 @@ spec:
           {{ $host := .observed.composite.resource.spec.parameters.host }}
           ---
           apiVersion: kubernetes.m.crossplane.io/v1alpha1
-          kind: ProviderConfig
-          metadata:
-            name: {{ $id }}
-            annotations:
-              {{ setResourceNameAnnotation "provider-config" }}
-          spec:
-            credentials:
-              source: InjectedIdentity
-          ---
-          apiVersion: kubernetes.m.crossplane.io/v1alpha1
           kind: Object
           metadata:
             name: {{ $id }}-deployment
@@ -88,7 +78,7 @@ spec:
                             memory: 128Mi
             providerConfigRef:
               kind: ProviderConfig
-              name: {{ $id }}
+              name: default
           ---
           apiVersion: kubernetes.m.crossplane.io/v1alpha1
           kind: Object
@@ -120,7 +110,7 @@ spec:
                     protocol: TCP
             providerConfigRef:
               kind: ProviderConfig
-              name: {{ $id }}
+              name: default
           ---
           apiVersion: kubernetes.m.crossplane.io/v1alpha1
           kind: Object
@@ -157,7 +147,7 @@ spec:
                               number: {{ $port }}
             providerConfigRef:
               kind: ProviderConfig
-              name: {{ $id }}
+              name: default
           ---
           apiVersion: kubernetes.m.crossplane.io/v1alpha1
           kind: Object
@@ -188,7 +178,7 @@ spec:
                   targetCPUUtilizationPercentage: 80
             providerConfigRef:
               kind: ProviderConfig
-              name: {{ $id }}
+              name: default
           ---
           apiVersion: kaonix.com/v1alpha1
           kind: App
