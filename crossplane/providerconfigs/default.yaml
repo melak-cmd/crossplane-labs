@@ -2,7 +2,7 @@ apiVersion: kubernetes.m.crossplane.io/v1alpha1
 kind: ProviderConfig
 metadata:
   name: default
-  namespace: a-team
+  namespace: platform
 spec:
   credentials:
     source: InjectedIdentity

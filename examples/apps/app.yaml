@@ -2,7 +2,7 @@ apiVersion: kaonix.com/v1alpha1
 kind: App
 metadata:
   name: devops-toolkit
-  namespace: a-team
+  namespace: platform
   labels:
     app-owner: vfarcic
 spec:
@@ -12,6 +12,6 @@ spec:
       matchLabels:
         type: frontend
   parameters:
-    namespace: a-team
+    namespace: platform
     image: vfarcic/devops-toolkit-series:4.0.0
     host: devops-toolkit.127.0.0.1.nip.io

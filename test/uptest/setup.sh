@@ -26,6 +26,16 @@ done
 echo "Waiting for provider-kubernetes CRDs..."
 kubectl wait --for=condition=Established crd/providerconfigs.kubernetes.m.crossplane.io --timeout=60s
 
+echo "Waiting for composition revisions to be ready..."
+for i in $(seq 1 60); do
+  if kubectl get compositionrevisions -o jsonpath='{range .items[*]}{.status.conditions[?(@.type=="Synced")].status}{"\n"}{end}' 2>/dev/null | grep -q "True"; then
+    echo "Composition revisions are synced."
+    break
+  fi
+  echo "Waiting for composition revisions... ($i)"
+  sleep 3
+done
+
 echo "Installing CloudNativePG..."
 helm repo add cnpg https://cloudnative-pg.github.io/charts --force-update
 helm repo update
@@ -35,10 +45,10 @@ helm upgrade --install cnpg cnpg/cloudnative-pg \
 echo "Waiting for CNPG CRDs..."
 kubectl wait --for=condition=Established crd/clusters.postgresql.cnpg.io --timeout=60s
 
-echo "Creating a-team namespace..."
-kubectl create namespace a-team --dry-run=client -o yaml | kubectl apply -f -
+echo "Creating platform namespace..."
+kubectl create namespace platform --dry-run=client -o yaml | kubectl apply -f -
 
-echo "Creating default ProviderConfig in a-team..."
+echo "Creating default ProviderConfig in platform..."
 kubectl apply -f "${ROOT_DIR}/crossplane/providerconfigs/"
 
 echo "Setup complete."
