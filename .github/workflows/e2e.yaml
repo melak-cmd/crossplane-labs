@@ -12,17 +12,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.22"
-
       - name: Install k3d
         run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
 
       - name: Install tools
         run: |
-          go install github.com/crossplane/uptest/cmd/uptest@latest
-          go install github.com/kyverno/chainsaw@latest
+          set -euo pipefail
+          bin_dir="$HOME/.local/bin"
+          mkdir -p "$bin_dir"
+          echo "$bin_dir" >> "$GITHUB_PATH"
+
+          curl -fsSL \
+            https://github.com/crossplane/uptest/releases/download/v2.2.0/uptest_linux-amd64 \
+            -o "$bin_dir/uptest" &
+          uptest_pid=$!
+
+          curl -fsSL \
+            https://github.com/kyverno/chainsaw/releases/download/v0.2.15/chainsaw_linux_amd64.tar.gz \
+            -o /tmp/chainsaw.tar.gz &
+          chainsaw_pid=$!
+
+          wait "$uptest_pid" "$chainsaw_pid"
+          tar -xzf /tmp/chainsaw.tar.gz -C "$bin_dir"
+          chmod +x "$bin_dir/uptest" "$bin_dir/chainsaw"
 
       - name: Create k3d cluster
         run: k3d cluster create crossplane-labs --config clusters/k3d.yaml
