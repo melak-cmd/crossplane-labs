@@ -2,7 +2,7 @@ CLUSTER_NAME ?= crossplane-labs
 NAMESPACE ?= platform
 
 .PHONY: help create-cluster delete-cluster install-cnpg deploy delete setup teardown \
-	build-xpkg uptest uptest-render status
+	build-xpkg uptest uptest-render render-app render-db status
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "%-25s %s\n", $$1, $$2}'
@@ -46,6 +46,14 @@ uptest-render: ## Render chainsaw test files without running them
 		--default-timeout 300s \
 		--skip-import \
 		--render-only
+
+render-app: ## Render App composition locally (requires Docker)
+	crossplane render examples/apps/app.yaml apis/apps/composition.yaml \
+		crossplane/functions/functions.yaml -x
+
+render-db: ## Render Database composition locally (requires Docker)
+	crossplane render examples/databases/postgres.yaml apis/databases/composition.yaml \
+		crossplane/functions/functions.yaml -x
 
 status: ## Show cluster and Crossplane status
 	k3d cluster list

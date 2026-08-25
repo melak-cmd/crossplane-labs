@@ -128,6 +128,22 @@ The setup script (`test/uptest/setup.sh`) handles:
 - CloudNativePG installation via Helm
 - Platform namespace and ProviderConfig creation
 
+## Local Render (requires Docker)
+
+Preview composed resources without a cluster:
+
+```bash
+make render-app      # render App composition
+make render-db       # render Database composition
+```
+
+Or directly:
+
+```bash
+crossplane render examples/apps/app.yaml apis/apps/composition.yaml \
+  crossplane/functions/functions.yaml -x
+```
+
 ## Other Targets
 
 ```bash
