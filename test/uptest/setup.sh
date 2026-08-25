@@ -13,6 +13,9 @@ kubectl apply -f "${ROOT_DIR}/crossplane/compositions/"
 echo "Installing Functions..."
 kubectl apply -f "${ROOT_DIR}/crossplane/functions/"
 
+echo "Waiting for all crossplane-system pods to be ready..."
+kubectl wait --for=condition=Ready pods --all -n crossplane-system --timeout=180s
+
 echo "Waiting for providers to be healthy..."
 kubectl wait --for=condition=Healthy provider --all --timeout=180s
 
