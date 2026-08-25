@@ -1,0 +1,55 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Install k3d
+        run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+
+      - name: Install tools
+        run: |
+          go install github.com/crossplane/uptest/cmd/uptest@latest
+          go install github.com/kyverno/chainsaw@latest
+
+      - name: Create k3d cluster
+        run: k3d cluster create crossplane-labs --config clusters/k3d.yaml
+
+      - name: Install Crossplane
+        run: |
+          helm repo add crossplane-stable https://charts.crossplane.io/stable --force-update
+          helm repo update
+          helm upgrade --install crossplane crossplane-stable/crossplane \
+            --namespace crossplane-system \
+            --create-namespace \
+            --version 2.3.3 \
+            --wait
+
+      - name: Install providers and functions
+        run: |
+          kubectl apply -f crossplane/providers/
+          kubectl apply -f crossplane/functions/
+
+      - name: Run uptest
+        run: |
+          KUBECTL=kubectl CROSSPLANE_NAMESPACE=crossplane-system \
+          uptest e2e test/uptest/app.yaml \
+            --setup-script test/uptest/setup.sh \
+            --default-timeout 300s \
+            --skip-import
+
+      - name: Cleanup
+        if: always()
+        run: k3d cluster delete crossplane-labs
