@@ -16,7 +16,7 @@ jobs:
         run: |
           curl -sfL "https://cli.crossplane.io/stable/current/bundle/linux_amd64/crossplane-cli.tar.gz" -o /tmp/crossplane-cli.tar.gz
           tar -xzf /tmp/crossplane-cli.tar.gz -C /usr/local/bin crossplane
-          crossplane version
+          crossplane --help > /dev/null
 
       - name: Build xpkg
         run: |
