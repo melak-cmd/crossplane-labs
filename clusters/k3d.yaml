@@ -13,3 +13,8 @@ options:
       - arg: --disable=servicelb
         nodeFilters:
           - server:0
+registries:
+  create:
+    name: registry.localhost
+    host: "0.0.0.0"
+    hostPort: "5000"

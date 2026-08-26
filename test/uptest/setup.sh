@@ -31,6 +31,9 @@ ${KUBECTL} apply -R -f "${ROOT_DIR}/apis/"
 echo "==> Installing Functions..."
 ${KUBECTL} apply -f "${ROOT_DIR}/crossplane/functions/"
 
+echo "==> Installing Providers..."
+${KUBECTL} apply -f "${ROOT_DIR}/crossplane/providers/"
+
 echo "==> Waiting for all crossplane-system pods to be ready..."
 ${KUBECTL} wait --for=condition=Ready pods --all \
   -n "${CROSSPLANE_NAMESPACE}" --timeout=180s
