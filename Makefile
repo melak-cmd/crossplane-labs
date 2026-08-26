@@ -4,7 +4,8 @@ PKG_NAME ?= kaonix-platform
 PKG_TAG ?= v0.1.0
 
 .PHONY: help create-cluster delete-cluster install-cnpg install-crossplane delete setup teardown \
-	build-xpkg push-xpkg install-xpkg uptest uptest-render render-app render-db render-network status
+	build-xpkg push-xpkg install-xpkg uptest uptest-render render-app render-db render-network \
+	validate-app validate-db validate-network validate status
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "%-25s %s\n", $$1, $$2}'
@@ -64,16 +65,34 @@ uptest-render: ## Render chainsaw test files without running them
 		--render-only
 
 render-app: ## Render App composition locally (requires Docker)
-	crossplane render examples/apps/app.yaml apis/apps/composition.yaml \
+	crossplane composition render examples/apps/app.yaml apis/apps/composition.yaml \
 		crossplane/functions/functions.yaml -x
 
 render-db: ## Render Database composition locally (requires Docker)
-	crossplane render examples/databases/postgres.yaml apis/databases/composition.yaml \
+	crossplane composition render examples/databases/postgres.yaml apis/databases/composition.yaml \
 		crossplane/functions/functions.yaml -x
 
 render-network: ## Render Network composition locally (requires Docker)
-	crossplane render examples/networks/network.yaml apis/networks/composition.yaml \
+	crossplane composition render examples/networks/network.yaml apis/networks/composition.yaml \
 		crossplane/functions/functions.yaml -x
+
+validate-app: ## Render and validate App composition (requires Docker)
+	crossplane composition render examples/apps/app.yaml apis/apps/composition.yaml \
+		crossplane/functions/functions.yaml -x | \
+		crossplane resource validate apis/ -
+
+validate-db: ## Render and validate Database composition (requires Docker)
+	crossplane composition render examples/databases/postgres.yaml apis/databases/composition.yaml \
+		crossplane/functions/functions.yaml -x | \
+		crossplane resource validate apis/ -
+
+validate-network: ## Render and validate Network composition (requires Docker)
+	crossplane composition render examples/networks/network.yaml apis/networks/composition.yaml \
+		crossplane/functions/functions.yaml -x | \
+		crossplane resource validate apis/ -
+
+validate: validate-app validate-db validate-network ## Render and validate all compositions (requires Docker)
+	@echo "All compositions validated successfully"
 
 status: ## Show cluster and Crossplane status
 	k3d cluster list

@@ -7,7 +7,50 @@ on:
     branches: [main]
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Crossplane CLI
+        run: curl -sL https://docs.crossplane.io/install-cli | sh
+
+      - name: Build xpkg
+        run: |
+          mkdir -p .build/apis .build/examples
+          cp crossplane.yaml .build/
+          cp -r apis/* .build/apis/
+          cp -r examples/* .build/examples/
+          crossplane xpkg build --package-root=.build --examples-root=.build/examples \
+            --package-file=xpkg.yaml --verbose
+          rm -rf .build
+
+      - name: Render App composition
+        run: crossplane composition render examples/apps/app.yaml apis/apps/composition.yaml crossplane/functions/functions.yaml -x
+
+      - name: Render Database composition
+        run: crossplane composition render examples/databases/postgres.yaml apis/databases/composition.yaml crossplane/functions/functions.yaml -x
+
+      - name: Render Network composition
+        run: crossplane composition render examples/networks/network.yaml apis/networks/composition.yaml crossplane/functions/functions.yaml -x
+
+      - name: Validate rendered App
+        run: |
+          crossplane composition render examples/apps/app.yaml apis/apps/composition.yaml crossplane/functions/functions.yaml -x | \
+            crossplane resource validate apis/ -
+
+      - name: Validate rendered Database
+        run: |
+          crossplane composition render examples/databases/postgres.yaml apis/databases/composition.yaml crossplane/functions/functions.yaml -x | \
+            crossplane resource validate apis/ -
+
+      - name: Validate rendered Network
+        run: |
+          crossplane composition render examples/networks/network.yaml apis/networks/composition.yaml crossplane/functions/functions.yaml -x | \
+            crossplane resource validate apis/ -
+
   e2e:
+    needs: validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
