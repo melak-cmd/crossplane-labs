@@ -1,0 +1,43 @@
+apiVersion: dev.crossplane.io/v1alpha1
+kind: Project
+metadata:
+  name: kaonix-platform
+spec:
+  maintainer: Kaonix
+  source: github.com/melak-cmd/crossplane-labs
+  license: Apache-2.0
+  description: |
+    Kaonix platform configuration with app, network, and database compositions.
+  readme: |
+    Featuring Compositions for:
+    - Apps (Deployment, HPA)
+    - Networks (NetworkPolicy, Service, Ingress, DNS)
+    - Databases (CloudNativePG Cluster, Secret)
+  repository: registry.localhost:5000/kaonix-platform
+  crossplane:
+    version: ">=v2.3.0"
+  dependencies:
+  - type: xpkg
+    xpkg:
+      apiVersion: pkg.crossplane.io/v1
+      kind: Function
+      package: ghcr.io/crossplane-contrib/function-go-templating
+      version: ">=v0.12.0"
+  - type: xpkg
+    xpkg:
+      apiVersion: pkg.crossplane.io/v1
+      kind: Function
+      package: ghcr.io/crossplane-contrib/function-auto-ready
+      version: ">=v0.7.0"
+  - type: xpkg
+    xpkg:
+      apiVersion: pkg.crossplane.io/v1
+      kind: Provider
+      package: xpkg.crossplane.io/crossplane-contrib/provider-kubernetes
+      version: ">=v1.3.0"
+  - type: xpkg
+    xpkg:
+      apiVersion: pkg.crossplane.io/v1
+      kind: Provider
+      package: xpkg.crossplane.io/crossplane-contrib/provider-helm
+      version: ">=v1.3.0"
