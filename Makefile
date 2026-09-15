@@ -3,7 +3,7 @@ REGISTRY ?= registry.localhost:5000
 PKG_NAME ?= kaonix-platform
 PKG_TAG ?= v0.1.0
 
-.PHONY: help create-cluster delete-cluster install-cnpg install-crossplane delete setup teardown \
+.PHONY: help create-cluster delete-cluster install-cnpg install-crossplane install-deps delete setup teardown \
 	build-xpkg push-xpkg install-xpkg uptest uptest-render render-app render-db render-network \
 	validate-app validate-db validate-network validate status
 
@@ -30,6 +30,15 @@ install-crossplane: ## Install Crossplane
 		--create-namespace \
 		--version 2.3.3 \
 		--wait
+
+install-deps: ## Install APIs, functions, and providers from source (no package dependency resolution)
+	kubectl create namespace platform --dry-run=client -o yaml | kubectl apply -f -
+	kubectl apply -R -f apis/
+	kubectl apply -f crossplane/functions/
+	kubectl apply -f crossplane/providers/
+	for i in $$(seq 1 60); do kubectl get crd providerconfigs.kubernetes.m.crossplane.io >/dev/null 2>&1 && break; sleep 3; done
+	kubectl wait --for=condition=Established crd/providerconfigs.kubernetes.m.crossplane.io --timeout=120s
+	kubectl apply -f crossplane/providerconfigs/
 
 delete: ## Delete application and database XRs
 	kubectl delete -f examples/ --recursive --ignore-not-found
@@ -103,7 +112,7 @@ status: ## Show cluster and Crossplane status
 	@echo ""
 	kubectl get apps databases -A 2>/dev/null || echo "No apps or databases deployed"
 
-setup: create-cluster install-cnpg install-crossplane install-xpkg ## Full cluster setup
+setup: create-cluster install-cnpg install-crossplane install-deps ## Full cluster setup
 	kubectl wait --for=condition=Ready pods --all -n crossplane-system --timeout=180s
 
-teardown: delete delete-cluster ## Delete resources and cluster
+teardown: delete-cluster ## Delete resources and cluster

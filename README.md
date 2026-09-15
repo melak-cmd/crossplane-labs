@@ -28,8 +28,8 @@ make create-cluster
 # 2. Install CloudNativePG operator
 make install-cnpg
 
-# 3. Deploy XRDs, Compositions, functions and provider config
-make deploy
+# 3. Install XRDs, Compositions, functions, providers and ProviderConfig
+make install-deps
 
 # 4. Deploy an app + network
 kubectl apply -f examples/apps/app.yaml
@@ -39,10 +39,12 @@ kubectl apply -f examples/networks/network.yaml
 kubectl apply -f examples/databases/postgres.yaml
 ```
 
+`install-deps` applies the source manifests directly (`apis/`, `crossplane/functions/`, `crossplane/providers/`, `crossplane/providerconfigs/`). It does **not** install the `kaonix-platform` Configuration package, so Crossplane never auto-resolves the package's `dependsOn` functions/providers (they are pinned by the local manifests instead).
+
 ### Using `make setup` (full cluster bootstrap)
 
 ```bash
-make setup          # create-cluster + install-cnpg + deploy + wait for pods
+make setup          # create-cluster + install-cnpg + install-crossplane + install-deps + wait for pods
 ```
 
 ## Example Resources
