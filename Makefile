@@ -1,10 +1,9 @@
 CLUSTER_NAME ?= crossplane-labs
-REGISTRY ?= registry.localhost:5000
 PKG_NAME ?= kaonix-platform
 PKG_TAG ?= v0.1.0
 
 .PHONY: help create-cluster delete-cluster install-cnpg install-crossplane install-deps delete setup teardown \
-	build-xpkg push-xpkg install-xpkg uptest uptest-render render-app render-db render-network \
+	project-build project-push uptest uptest-render render-app render-db render-network \
 	validate-app validate-db validate-network validate status
 
 help: ## Show this help
@@ -34,70 +33,61 @@ install-crossplane: ## Install Crossplane
 install-deps: ## Install APIs, functions, and providers from source (no package dependency resolution)
 	kubectl create namespace platform --dry-run=client -o yaml | kubectl apply -f -
 	kubectl apply -R -f apis/
-	kubectl apply -f crossplane/functions/
-	kubectl apply -f crossplane/providers/
+	kubectl apply -f functions/
+	kubectl apply -f providers/
 	for i in $$(seq 1 60); do kubectl get crd providerconfigs.kubernetes.m.crossplane.io >/dev/null 2>&1 && break; sleep 3; done
 	kubectl wait --for=condition=Established crd/providerconfigs.kubernetes.m.crossplane.io --timeout=120s
-	kubectl apply -f crossplane/providerconfigs/
+	kubectl apply -f providers/providerconfigs/
 
 delete: ## Delete application and database XRs
 	kubectl delete -f examples/ --recursive --ignore-not-found
 
-build-xpkg: ## Build Crossplane Configuration Package
-	rm -rf .build && mkdir -p .build/apis .build/examples
-	cp crossplane.yaml .build/
-	cp -r apis/* .build/apis/
-	cp -r examples/* .build/examples/
-	crossplane xpkg build --package-root=.build --examples-root=".build/examples" \
-		--package-file=xpkg.yaml --verbose
-	rm -rf .build
+project-build: ## Build Crossplane project into packages (requires Docker)
+	crossplane project build
 
-push-xpkg: build-xpkg ## Push package to local registry
-	crossplane xpkg push localhost:5000/$(PKG_NAME):$(PKG_TAG) -f xpkg.yaml
-
-install-xpkg: push-xpkg ## Install package from local registry
-	crossplane xpkg install configuration $(REGISTRY)/$(PKG_NAME):$(PKG_TAG) $(PKG_NAME) --wait=3m
+project-push: project-build ## Push built project packages to local registry
+	crossplane project push -t $(PKG_TAG)
 
 uptest: ## Run e2e tests with uptest
 	KUBECTL=kubectl CROSSPLANE_NAMESPACE=crossplane-system CHAINSAW=chainsaw \
-	uptest e2e test/uptest/app.yaml \
-		--setup-script test/uptest/setup.sh \
+	uptest e2e tests/uptest/app.yaml \
+		--setup-script tests/uptest/setup.sh \
 		--default-timeout 300s \
 		--skip-import
 
 uptest-render: ## Render chainsaw test files without running them
 	KUBECTL=kubectl CROSSPLANE_NAMESPACE=crossplane-system CHAINSAW=chainsaw \
-	uptest e2e test/uptest/app.yaml \
-		--setup-script test/uptest/setup.sh \
+	uptest e2e tests/uptest/app.yaml \
+		--setup-script tests/uptest/setup.sh \
 		--default-timeout 300s \
 		--skip-import \
 		--render-only
 
 render-app: ## Render App composition locally (requires Docker)
 	crossplane composition render examples/apps/app.yaml apis/apps/composition.yaml \
-		crossplane/functions/functions.yaml -x
+		functions/functions.yaml -x
 
 render-db: ## Render Database composition locally (requires Docker)
 	crossplane composition render examples/databases/postgres.yaml apis/databases/composition.yaml \
-		crossplane/functions/functions.yaml -x
+		functions/functions.yaml -x
 
 render-network: ## Render Network composition locally (requires Docker)
 	crossplane composition render examples/networks/network.yaml apis/networks/composition.yaml \
-		crossplane/functions/functions.yaml -x
+		functions/functions.yaml -x
 
 validate-app: ## Render and validate App composition (requires Docker)
 	crossplane composition render examples/apps/app.yaml apis/apps/composition.yaml \
-		crossplane/functions/functions.yaml -x | \
+		functions/functions.yaml -x | \
 		crossplane resource validate apis/ -
 
 validate-db: ## Render and validate Database composition (requires Docker)
 	crossplane composition render examples/databases/postgres.yaml apis/databases/composition.yaml \
-		crossplane/functions/functions.yaml -x | \
+		functions/functions.yaml -x | \
 		crossplane resource validate apis/ -
 
 validate-network: ## Render and validate Network composition (requires Docker)
 	crossplane composition render examples/networks/network.yaml apis/networks/composition.yaml \
-		crossplane/functions/functions.yaml -x | \
+		functions/functions.yaml -x | \
 		crossplane resource validate apis/ -
 
 validate: validate-app validate-db validate-network ## Render and validate all compositions (requires Docker)

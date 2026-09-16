@@ -3,34 +3,49 @@ kind: CompositeResourceDefinition
 metadata:
   name: apps.kaonix.com
 spec:
+  group: kaonix.com
+  names:
+    categories:
+    - crossplane
+    kind: App
+    plural: apps
   scope: Namespaced
   defaultCompositeDeletePolicy: Background
   defaultCompositionRef:
     name: app-frontend
   defaultCompositionUpdatePolicy: Automatic
-  group: kaonix.com
-  names:
-    kind: App
-    plural: apps
   versions:
   - name: v1alpha1
     referenceable: true
     schema:
       openAPIV3Schema:
+        description: App is the Schema for the App API.
         properties:
           spec:
+            description: AppSpec defines the desired state of App.
             properties:
+              crossplane:
+                properties:
+                  compositionSelector:
+                    properties:
+                      matchLabels:
+                        properties:
+                          type:
+                            type: string
+                        type: object
+                    type: object
+                type: object
               id:
                 description: Unique identifier for this application.
                 type: string
               parameters:
                 properties:
+                  image:
+                    description: The container image of the application.
+                    type: string
                   namespace:
                     default: default
                     description: The namespace to deploy into.
-                    type: string
-                  image:
-                    description: The container image of the application.
                     type: string
                   port:
                     default: 80
@@ -43,5 +58,10 @@ spec:
             - id
             - parameters
             type: object
+          status:
+            description: AppStatus defines the observed state of App.
+            type: object
+        required:
+        - spec
         type: object
     served: true

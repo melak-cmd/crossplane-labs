@@ -3,15 +3,17 @@ kind: CompositeResourceDefinition
 metadata:
   name: networks.kaonix.com
 spec:
+  group: kaonix.com
+  names:
+    categories:
+    - crossplane
+    kind: Network
+    plural: networks
   scope: Namespaced
   defaultCompositeDeletePolicy: Background
   defaultCompositionRef:
     name: network-fullstack
   defaultCompositionUpdatePolicy: Automatic
-  group: kaonix.com
-  names:
-    kind: Network
-    plural: networks
   versions:
   - additionalPrinterColumns:
     - jsonPath: .status.serviceName
@@ -24,21 +26,54 @@ spec:
     referenceable: true
     schema:
       openAPIV3Schema:
+        description: Network is the Schema for the Network API.
         properties:
           spec:
+            description: NetworkSpec defines the desired state of Network.
             properties:
               id:
                 description: Unique identifier for this network configuration.
                 type: string
               parameters:
                 properties:
+                  appName:
+                    description: The name of the target application (used for selector matching).
+                    type: string
+                  dns:
+                    description: External DNS name (creates an ExternalName service).
+                    type: string
+                  ingress:
+                    description: Ingress configuration (optional).
+                    properties:
+                      host:
+                        description: The hostname for the Ingress rule.
+                        type: string
+                      path:
+                        default: /
+                        description: The path for the Ingress rule.
+                        type: string
+                      tlsSecret:
+                        description: TLS secret name for HTTPS. If empty, no TLS.
+                        type: string
+                    type: object
                   namespace:
                     default: default
                     description: The namespace of the target application.
                     type: string
-                  appName:
-                    description: The name of the target application (used for selector matching).
-                    type: string
+                  networkPolicy:
+                    description: NetworkPolicy configuration (optional).
+                    properties:
+                      egress:
+                        description: Allowed egress destinations as CIDR blocks.
+                        items:
+                          type: string
+                        type: array
+                      ingress:
+                        description: Allowed ingress sources as CIDR blocks.
+                        items:
+                          type: string
+                        type: array
+                    type: object
                   ports:
                     description: List of port mappings to expose.
                     items:
@@ -57,37 +92,6 @@ spec:
                       - port
                       type: object
                     type: array
-                  ingress:
-                    description: Ingress configuration (optional).
-                    properties:
-                      host:
-                        description: The hostname for the Ingress rule.
-                        type: string
-                      path:
-                        default: /
-                        description: The path for the Ingress rule.
-                        type: string
-                      tlsSecret:
-                        description: TLS secret name for HTTPS. If empty, no TLS.
-                        type: string
-                    type: object
-                  networkPolicy:
-                    description: NetworkPolicy configuration (optional).
-                    properties:
-                      ingress:
-                        description: Allowed ingress sources as CIDR blocks.
-                        items:
-                          type: string
-                        type: array
-                      egress:
-                        description: Allowed egress destinations as CIDR blocks.
-                        items:
-                          type: string
-                        type: array
-                    type: object
-                  dns:
-                    description: External DNS name (creates an ExternalName service).
-                    type: string
                 required:
                 - appName
                 - ports
@@ -97,16 +101,19 @@ spec:
             - parameters
             type: object
           status:
+            description: NetworkStatus defines the observed state of Network.
             properties:
-              serviceName:
-                description: The name of the created Service.
-                type: string
               ingressHost:
                 description: The Ingress host.
                 type: string
               networkPolicyName:
                 description: The name of the created NetworkPolicy.
                 type: string
+              serviceName:
+                description: The name of the created Service.
+                type: string
             type: object
+        required:
+        - spec
         type: object
     served: true

@@ -3,15 +3,17 @@ kind: CompositeResourceDefinition
 metadata:
   name: databases.kaonix.com
 spec:
+  group: kaonix.com
+  names:
+    categories:
+    - crossplane
+    kind: Database
+    plural: databases
   scope: Namespaced
   defaultCompositeDeletePolicy: Background
   defaultCompositionRef:
     name: database-cnpg
   defaultCompositionUpdatePolicy: Automatic
-  group: kaonix.com
-  names:
-    kind: Database
-    plural: databases
   versions:
   - additionalPrinterColumns:
     - jsonPath: .status.host
@@ -27,25 +29,27 @@ spec:
     referenceable: true
     schema:
       openAPIV3Schema:
+        description: Database is the Schema for the Database API.
         properties:
           spec:
+            description: DatabaseSpec defines the desired state of Database.
             properties:
               id:
                 description: Unique identifier for this database.
                 type: string
               parameters:
                 properties:
-                  namespace:
-                    default: default
-                    description: The namespace for the database resources.
-                    type: string
                   database:
                     default: app
                     description: The name of the database to create.
                     type: string
-                  version:
-                    default: "16"
-                    description: PostgreSQL major version (e.g., 13, 14, 15, 16).
+                  instances:
+                    default: 1
+                    description: Number of PostgreSQL instances (replicas).
+                    type: integer
+                  namespace:
+                    default: default
+                    description: The namespace for the database resources.
                     type: string
                   size:
                     default: small
@@ -58,10 +62,10 @@ spec:
                       Explicit PVC storage size (e.g., 1Gi). Overrides the
                       size preset when set.
                     type: string
-                  instances:
-                    default: 1
-                    description: Number of PostgreSQL instances (replicas).
-                    type: integer
+                  version:
+                    default: "16"
+                    description: PostgreSQL major version (e.g., 13, 14, 15, 16).
+                    type: string
                 required:
                 - namespace
                 type: object
@@ -70,19 +74,22 @@ spec:
             - parameters
             type: object
           status:
+            description: DatabaseStatus defines the observed state of Database.
             properties:
+              dbName:
+                description: Name of the database.
+                type: string
               host:
                 description: Internal Kubernetes Service address.
                 type: string
               port:
                 description: PostgreSQL port.
                 type: integer
-              dbName:
-                description: Name of the database.
-                type: string
               secretName:
                 description: Name of the Secret containing credentials.
                 type: string
             type: object
+        required:
+        - spec
         type: object
     served: true

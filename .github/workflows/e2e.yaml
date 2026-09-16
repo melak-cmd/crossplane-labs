@@ -18,38 +18,31 @@ jobs:
           tar -xzf /tmp/crossplane-cli.tar.gz -C /usr/local/bin crossplane
           crossplane --help > /dev/null
 
-      - name: Build xpkg
-        run: |
-          mkdir -p .build/apis .build/examples
-          cp crossplane.yaml .build/
-          cp -r apis/* .build/apis/
-          cp -r examples/* .build/examples/
-          crossplane xpkg build --package-root=.build --examples-root=.build/examples \
-            --package-file=xpkg.yaml --verbose
-          rm -rf .build
+      - name: Build project
+        run: make project-build
 
       - name: Render App composition
-        run: crossplane composition render examples/apps/app.yaml apis/apps/composition.yaml crossplane/functions/functions.yaml -x
+        run: crossplane composition render examples/apps/app.yaml apis/apps/composition.yaml functions/functions.yaml -x
 
       - name: Render Database composition
-        run: crossplane composition render examples/databases/postgres.yaml apis/databases/composition.yaml crossplane/functions/functions.yaml -x
+        run: crossplane composition render examples/databases/postgres.yaml apis/databases/composition.yaml functions/functions.yaml -x
 
       - name: Render Network composition
-        run: crossplane composition render examples/networks/network.yaml apis/networks/composition.yaml crossplane/functions/functions.yaml -x
+        run: crossplane composition render examples/networks/network.yaml apis/networks/composition.yaml functions/functions.yaml -x
 
       - name: Validate rendered App
         run: |
-          crossplane composition render examples/apps/app.yaml apis/apps/composition.yaml crossplane/functions/functions.yaml -x | \
+          crossplane composition render examples/apps/app.yaml apis/apps/composition.yaml functions/functions.yaml -x | \
             crossplane resource validate apis/ -
 
       - name: Validate rendered Database
         run: |
-          crossplane composition render examples/databases/postgres.yaml apis/databases/composition.yaml crossplane/functions/functions.yaml -x | \
+          crossplane composition render examples/databases/postgres.yaml apis/databases/composition.yaml functions/functions.yaml -x | \
             crossplane resource validate apis/ -
 
       - name: Validate rendered Network
         run: |
-          crossplane composition render examples/networks/network.yaml apis/networks/composition.yaml crossplane/functions/functions.yaml -x | \
+          crossplane composition render examples/networks/network.yaml apis/networks/composition.yaml functions/functions.yaml -x | \
             crossplane resource validate apis/ -
 
   e2e:
@@ -97,15 +90,15 @@ jobs:
 
       - name: Install providers and functions
         run: |
-          kubectl apply -f crossplane/providers/
-          kubectl apply -f crossplane/functions/
+          kubectl apply -f providers/
+          kubectl apply -f functions/
 
       - name: Run uptest
         run: |
           KUBECTL=kubectl CROSSPLANE_NAMESPACE=crossplane-system \
           CHAINSAW=$(which chainsaw) \
-          uptest e2e test/uptest/app.yaml \
-            --setup-script test/uptest/setup.sh \
+          uptest e2e tests/uptest/app.yaml \
+            --setup-script tests/uptest/setup.sh \
             --default-timeout 300s \
             --skip-import
 

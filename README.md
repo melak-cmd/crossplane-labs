@@ -16,7 +16,7 @@ All XRDs use **namespaced scope** (`v2` API) so XRs live alongside your workload
 
 - [k3d](https://k3d.io/) (or any existing Kubernetes cluster with Crossplane)
 - [Helm 3](https://helm.sh/)
-- [Crossplane CLI](https://docs.crossplane.io/latest/cli/) (`crossplane` / `xpkg`)
+- [Crossplane CLI](https://docs.crossplane.io/latest/cli/) (v2.5+ with `project` support)
 - [uptest](https://github.com/crossplane/uptest) + [chainsaw](https://github.com/kyverno/chainsaw) (for e2e tests)
 
 ## Quick Start
@@ -39,7 +39,16 @@ kubectl apply -f examples/networks/network.yaml
 kubectl apply -f examples/databases/postgres.yaml
 ```
 
-`install-deps` applies the source manifests directly (`apis/`, `crossplane/functions/`, `crossplane/providers/`, `crossplane/providerconfigs/`). It does **not** install the `kaonix-platform` Configuration package, so Crossplane never auto-resolves the package's `dependsOn` functions/providers (they are pinned by the local manifests instead).
+`install-deps` applies the source manifests directly (`apis/`, `functions/`, `providers/`, `providers/providerconfigs/`). It does **not** install the `kaonix-platform` Configuration package, so Crossplane never auto-resolves the package's `dependsOn` functions/providers (they are pinned by the local manifests instead).
+
+## Packaging & Build
+
+The repo is a Crossplane **project** described by `crossplane-project.yaml` at the repo root (it replaces the legacy `crossplane.yaml` package manifest). It pins the same four dependencies as before — `function-go-templating >=v0.12.0`, `function-auto-ready >=v0.7.0`, `provider-kubernetes >=v1.3.0`, `provider-helm >=v1.3.0` — and the repository `registry.localhost:5000/kaonix-platform`.
+
+```bash
+make project-build   # crossplane project build → _output/kaonix-platform.xpkg (+ schemas/)
+make project-push    # crossplane project push → push packages to the local registry
+```
 
 ### Using `make setup` (full cluster bootstrap)
 
@@ -118,13 +127,16 @@ spec:
 
 ```
 crossplane-labs/
+├── crossplane-project.yaml # Project definition (replaces crossplane.yaml)
 ├── apis/
-│   ├── apps/               # App XRD + Composition (Deployment, HPA)
-│   ├── databases/          # Database XRD + Composition (CNPG Cluster)
-│   └── networks/           # Network XRD + Composition (NetworkPolicy, Service, Ingress, DNS)
-├── crossplane/
-│   ├── functions/          # go-templating, auto-ready, patch-and-transform
-│   ├── providers/          # kubernetes, helm providers + DeploymentRuntimeConfig
+│   ├── apps/               # App XRD (definition.yaml) + Composition (composition.yaml)
+│   ├── databases/          # Database XRD (definition.yaml) + Composition (composition.yaml)
+│   └── networks/           # Network XRD (definition.yaml) + Composition (composition.yaml)
+├── functions/
+│   └── functions.yaml      # go-templating, auto-ready, patch-and-transform
+├── providers/
+│   ├── kubernetes.yaml     # provider-kubernetes + DeploymentRuntimeConfig
+│   ├── helm.yaml           # provider-helm + DeploymentRuntimeConfig
 │   └── providerconfigs/    # default ProviderConfig (namespace: platform)
 ├── clusters/
 │   └── k3d.yaml            # k3d cluster config
@@ -132,11 +144,13 @@ crossplane-labs/
 │   ├── apps/               # sample App XR
 │   ├── databases/          # sample Database XR
 │   └── networks/           # sample Network XR
-├── test/
+├── operations/             # placeholder for Operations manifests
+├── tests/
 │   └── uptest/
 │       ├── setup.sh        # e2e setup (installs CRDs, providers, CNPG, webhook check)
 │       └── app.yaml        # uptest manifest (5 resources, 300s timeout)
-├── crossplane.yaml         # Configuration package metadata
+├── schemas/                # generated dependency schemas (from project build)
+├── _output/                # generated packages (kaonix-platform.xpkg)
 └── Makefile
 ```
 
@@ -152,7 +166,7 @@ make uptest
 make uptest-render
 ```
 
-The setup script (`test/uptest/setup.sh`) handles:
+The setup script (`tests/uptest/setup.sh`) handles:
 - Applying XRDs, Compositions, and functions
 - Waiting for provider health and composition revisions
 - Provider webhook endpoint validation
@@ -173,7 +187,7 @@ Or directly:
 
 ```bash
 crossplane render examples/apps/app.yaml apis/apps/composition.yaml \
-  crossplane/functions/functions.yaml -x
+  functions/functions.yaml -x
 ```
 
 ## Other Targets
@@ -182,7 +196,8 @@ crossplane render examples/apps/app.yaml apis/apps/composition.yaml \
 make status          # cluster + Crossplane overview
 make delete          # remove example XRs
 make teardown        # delete XRs + destroy cluster
-make build-xpkg      # build crossplane.xpkg package
+make project-build   # build project packages into _output/
+make project-push    # build + push packages to the local registry
 ```
 
 ## CI

@@ -29,10 +29,10 @@ echo "==> Installing XRDs and Compositions..."
 ${KUBECTL} apply -R -f "${ROOT_DIR}/apis/"
 
 echo "==> Installing Functions..."
-${KUBECTL} apply -f "${ROOT_DIR}/crossplane/functions/"
+${KUBECTL} apply -f "${ROOT_DIR}/functions/"
 
 echo "==> Installing Providers..."
-${KUBECTL} apply -f "${ROOT_DIR}/crossplane/providers/"
+${KUBECTL} apply -f "${ROOT_DIR}/providers/"
 
 echo "==> Waiting for all crossplane-system pods to be ready..."
 ${KUBECTL} wait --for=condition=Ready pods --all \
@@ -93,6 +93,6 @@ ${KUBECTL} create namespace platform --dry-run=client -o yaml \
   | ${KUBECTL} apply -f -
 
 echo "==> Creating default ProviderConfig in platform..."
-${KUBECTL} apply -f "${ROOT_DIR}/crossplane/providerconfigs/"
+${KUBECTL} apply -f "${ROOT_DIR}/providers/providerconfigs/"
 
 echo "==> Setup complete."

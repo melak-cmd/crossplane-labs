@@ -1,2 +1,4 @@
 .up/
 .build/
+_output/
+schemas/
