@@ -1,9 +1,0 @@
-{
-  "packages": {
-    "fs://apis": "1e47f0d4e8c59d78ab7f2b82225afacdccd1d7b964e1e51085c8da6b601f7f8e",
-    "xpkg://ghcr.io/crossplane-contrib/function-auto-ready:v0.7.0": "sha256:989e7bb4704859cbd6475cc61255b4b4ad53483ea43f3d2d1e4be5e3ff678869",
-    "xpkg://ghcr.io/crossplane-contrib/function-go-templating:v0.12.5": "sha256:064e60c64420832b947fba90f4bc498b9e8894d80d0c1394dbf298a4363ef59b",
-    "xpkg://xpkg.crossplane.io/crossplane-contrib/provider-helm:v1.4.0": "sha256:2280e32fd4e42f0bbe66d1dcd8ddd9cc3a4d46eaba9f4bccddfaec2302664926",
-    "xpkg://xpkg.crossplane.io/crossplane-contrib/provider-kubernetes:v1.3.1": "sha256:183133c96a306dd8a8be13fa4b44065e170335b70d35696716ddb6df6a0a375c"
-  }
-}
