@@ -1,0 +1,18 @@
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Function
+metadata:
+  name: function-patch-and-transform
+spec:
+  package: xpkg.crossplane.io/crossplane-contrib/function-patch-and-transform:v0.10.9
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Function
+metadata:
+  name: function-scale
+  annotations:
+    # This tells crossplane render to run the function locally.
+    render.crossplane.io/runtime: Development
+spec:
+  # This is ignored when using the Development runtime.
+  package: function-scale

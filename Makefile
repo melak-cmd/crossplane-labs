@@ -2,9 +2,14 @@ CLUSTER_NAME ?= crossplane-labs
 PKG_NAME ?= kaonix-platform
 PKG_TAG ?= v0.1.0
 
+FUNCTION_NAME ?= function-scale
+FUNCTION_TAG ?= v0.1.0
+FUNCTION_IMAGE ?= registry.localhost:5000/$(FUNCTION_NAME)
+
 .PHONY: help create-cluster delete-cluster install-cnpg install-crossplane install-deps delete setup teardown \
 	project-build project-push uptest uptest-render render-app render-db render-network \
-	validate-app validate-db validate-network validate status
+	validate-app validate-db validate-network validate status \
+	function-build function-test function-lint function-xpkg function-push function-render
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "%-25s %s\n", $$1, $$2}'
@@ -92,6 +97,36 @@ validate-network: ## Render and validate Network composition (requires Docker)
 
 validate: validate-app validate-db validate-network ## Render and validate all compositions (requires Docker)
 	@echo "All compositions validated successfully"
+
+function-build: ## Build the function binary for the Development render runtime
+	cd functions/$(FUNCTION_NAME) && go build -o function .
+
+function-test: ## Run function unit tests
+	cd functions/$(FUNCTION_NAME) && go test ./...
+
+function-lint: ## Lint the function
+	cd functions/$(FUNCTION_NAME) && golangci-lint run
+
+function-xpkg: ## Build the function runtime image (Docker) and xpkg package (requires Docker)
+	cd functions/$(FUNCTION_NAME) && docker build . --tag=$(FUNCTION_IMAGE):$(FUNCTION_TAG)
+	cd functions/$(FUNCTION_NAME) && crossplane xpkg build \
+		--package-root=package \
+		--embed-runtime-image=$(FUNCTION_IMAGE):$(FUNCTION_TAG) \
+		--package-file=$(FUNCTION_NAME).xpkg
+
+function-push: function-xpkg ## Push the function image and xpkg to the local registry
+	docker push $(FUNCTION_IMAGE):$(FUNCTION_TAG)
+	cd functions/$(FUNCTION_NAME) && crossplane xpkg push $(FUNCTION_NAME).xpkg $(FUNCTION_IMAGE):$(FUNCTION_TAG)
+
+function-render: function-build ## Render the function example locally (requires Docker)
+	cd functions/$(FUNCTION_NAME) && ./function --insecure >/tmp/function-scale.log 2>&1 & \
+	FNPID=$$!; \
+	sleep 2; \
+	cd functions/$(FUNCTION_NAME) && crossplane render example/xr.yaml example/composition.yaml example/functions.yaml -x; \
+	RC=$$?; \
+	kill $$FNPID 2>/dev/null; \
+	wait $$FNPID 2>/dev/null; \
+	exit $$RC
 
 status: ## Show cluster and Crossplane status
 	k3d cluster list

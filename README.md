@@ -133,7 +133,8 @@ crossplane-labs/
 │   ├── databases/          # Database XRD (definition.yaml) + Composition (composition.yaml)
 │   └── networks/           # Network XRD (definition.yaml) + Composition (composition.yaml)
 ├── functions/
-│   └── functions.yaml      # go-templating, auto-ready, patch-and-transform
+│   ├── functions.yaml      # go-templating, auto-ready, patch-and-transform, function-scale
+│   └── function-scale/     # custom Go function (scale composed Deployments)
 ├── providers/
 │   ├── kubernetes.yaml     # provider-kubernetes + DeploymentRuntimeConfig
 │   ├── helm.yaml           # provider-helm + DeploymentRuntimeConfig
@@ -189,6 +190,66 @@ Or directly:
 crossplane render examples/apps/app.yaml apis/apps/composition.yaml \
   functions/functions.yaml -x
 ```
+
+## Custom Functions
+
+The repo hosts custom Crossplane composition functions (Go SDK) under `functions/`. The first one is **`function-scale`**: given an input like below, it sets `spec.replicas` on each desired composed resource whose `metadata.name` matches; unmatched targets surface a `Synced=False`/`TargetNotFound` condition and all other resources pass through unchanged.
+
+```yaml
+apiVersion: function-scale.fn.kaonix.com/v1beta1
+kind: Input
+spec:
+  scaleTargets:
+  - name: my-app
+    replicas: 8
+```
+
+Create a new function from the official template:
+
+```bash
+crossplane xpkg init <function-name> function-template-go \
+  -d functions/<function-name> -r
+```
+
+Then update the module path in `go.mod`, the `input/` types, and `fn.go`, and regenerate the input schema with `go generate ./...`.
+
+### Function Make targets
+
+```bash
+make function-build    # go build -o function (Development runtime binary)
+make function-test     # unit tests
+make function-lint     # golangci-lint
+make function-render   # local render of the example (requires Docker)
+make function-xpkg     # Docker runtime image + .xpkg package
+make function-push     # push image + .xpkg to the local registry
+```
+
+### Local development & render
+
+```bash
+make function-render
+```
+
+This builds the binary, runs it locally with `--insecure`, and renders
+`functions/function-scale/example/` (the Function uses the `render.crossplane.io/runtime:
+Development` annotation, so no cluster is needed). Manually:
+
+```bash
+cd functions/function-scale
+go build -o function .
+./function --insecure &   # listens on localhost:9443
+crossplane render example/xr.yaml example/composition.yaml example/functions.yaml -x
+```
+
+### Deploying to a cluster
+
+```bash
+make function-push                  # build + push image and xpkg to registry.localhost:5000
+```
+
+The `Function` object for `function-scale` lives in `functions/functions.yaml`
+(also applied by `install-deps`), so once the package is in the local registry
+it is picked up automatically.
 
 ## Other Targets
 

@@ -1,0 +1,7 @@
+apiVersion: kaonix.com/v1alpha1
+kind: App
+metadata:
+  name: my-app
+  namespace: platform
+spec:
+  id: my-app
