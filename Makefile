@@ -69,8 +69,7 @@ uptest-render: ## Render chainsaw test files without running them
 		--render-only
 
 render-app: ## Render App composition locally (requires Docker)
-	crossplane composition render examples/apps/app.yaml apis/apps/composition.yaml \
-		functions/functions.yaml -x
+	crossplane composition render examples/apps/app.yaml apis/apps/composition.yaml -x
 
 render-db: ## Render Database composition locally (requires Docker)
 	crossplane composition render examples/databases/postgres.yaml apis/databases/composition.yaml \
@@ -81,8 +80,7 @@ render-network: ## Render Network composition locally (requires Docker)
 		functions/functions.yaml -x
 
 validate-app: ## Render and validate App composition (requires Docker)
-	crossplane composition render examples/apps/app.yaml apis/apps/composition.yaml \
-		functions/functions.yaml -x | \
+	crossplane composition render examples/apps/app.yaml apis/apps/composition.yaml -x | \
 		crossplane resource validate apis/ -
 
 validate-db: ## Render and validate Database composition (requires Docker)
