@@ -39,6 +39,25 @@ spec:
                 type: string
               parameters:
                 properties:
+                  backup:
+                    description: >
+                      Optional volume-snapshot backup configuration. When set, a
+                      CloudNativePG ScheduledBackup is created for the cluster.
+                    properties:
+                      schedule:
+                        description: >
+                          Cron schedule (including seconds) for automated
+                          volume-snapshot backups, e.g. "0 0 2 * * *".
+                        type: string
+                      snapshotClass:
+                        description: >
+                          Name of the VolumeSnapshotClass used for snapshots.
+                          Defaults to the cluster's default VolumeSnapshotClass
+                          when unset.
+                        type: string
+                    required:
+                    - schedule
+                    type: object
                   database:
                     default: app
                     description: The name of the database to create.
@@ -62,6 +81,14 @@ spec:
                       Explicit PVC storage size (e.g., 1Gi). Overrides the
                       size preset when set.
                     type: string
+                  storageClass:
+                    description: >
+                      StorageClass for the PostgreSQL PVCs. Required when the
+                      Database is backed up via volume snapshots, so the
+                      StorageClass provisioner supports snapshots (e.g., a CSI
+                      driver). Defaults to the cluster default StorageClass
+                      when unset.
+                    type: string
                   version:
                     default: "16"
                     description: PostgreSQL major version (e.g., 13, 14, 15, 16).
@@ -76,6 +103,21 @@ spec:
           status:
             description: DatabaseStatus defines the observed state of Database.
             properties:
+              backup:
+                description: Observed backup status when backup is configured.
+                properties:
+                  lastSuccessfulBackup:
+                    description: >
+                      Timestamp of the last successful backup reported by
+                      CloudNativePG.
+                    type: string
+                  resourceName:
+                    description: Name of the ScheduledBackup resource.
+                    type: string
+                  schedule:
+                    description: Configured backup schedule.
+                    type: string
+                type: object
               dbName:
                 description: Name of the database.
                 type: string

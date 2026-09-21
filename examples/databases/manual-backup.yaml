@@ -1,0 +1,9 @@
+apiVersion: kaonix.com/v1alpha1
+kind: DatabaseBackup
+metadata:
+  name: devops-toolkit-db-backup-manual
+  namespace: platform
+spec:
+  # id of the Database XR to back up. The backup targets the CNPG Cluster
+  # named <id> in this namespace and composes a CNPG Backup named <id>-backup-manual.
+  id: devops-toolkit-db-backup

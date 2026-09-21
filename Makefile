@@ -3,12 +3,12 @@ PKG_NAME ?= kaonix-platform
 PKG_TAG ?= v0.1.0
 
 FUNCTION_NAME ?= function-scale
-FUNCTION_TAG ?= v0.1.0
+FUNCTION_TAG ?= v0.1.1
 FUNCTION_IMAGE ?= registry.localhost:5000/$(FUNCTION_NAME)
 
-.PHONY: help create-cluster delete-cluster install-cnpg install-crossplane install-deps delete setup teardown \
-	project-build project-push uptest uptest-render render-app render-db render-network \
-	validate-app validate-db validate-network validate status \
+.PHONY: help create-cluster delete-cluster install-csi install-cnpg install-crossplane install-deps delete setup teardown restart-cnpg \
+	project-build project-push uptest uptest-render render-app render-db render-db-backup render-backup render-network \
+	validate-app validate-db validate-db-backup validate-backup validate-network validate status \
 	function-build function-test function-lint function-xpkg function-push function-render
 
 help: ## Show this help
@@ -19,6 +19,17 @@ create-cluster: ## Create k3d cluster
 
 delete-cluster: ## Delete k3d cluster
 	k3d cluster delete $(CLUSTER_NAME)
+
+install-csi: ## Install CSI snapshot support (snapshot CRDs, snapshot-controller, hostpath CSI driver, classes)
+	kubectl apply -f clusters/csi/snapshot-crds.yaml
+	kubectl wait --for=condition=Established crd/volumesnapshots.snapshot.storage.k8s.io --timeout=60s
+	kubectl apply -f clusters/csi/snapshot-controller.yaml
+	kubectl apply -f clusters/csi/hostpath-rbac.yaml
+	kubectl apply -f clusters/csi/hostpath-driverinfo.yaml
+	kubectl apply -f clusters/csi/hostpath-plugin.yaml
+	kubectl apply -f clusters/csi/snapshot-class.yaml
+	kubectl apply -f clusters/csi/storage-class.yaml
+	kubectl -n kube-system rollout status deploy/snapshot-controller --timeout=120s
 
 install-cnpg: ## Install CloudNativePG operator
 	helm repo add cnpg https://cloudnative-pg.github.io/charts --force-update
@@ -75,6 +86,14 @@ render-db: ## Render Database composition locally (requires Docker)
 	crossplane composition render examples/databases/postgres.yaml apis/databases/composition.yaml \
 		functions/functions.yaml -x
 
+render-db-backup: ## Render backup-enabled Database composition locally (requires Docker)
+	crossplane composition render examples/databases/backup.yaml apis/databases/composition.yaml \
+		functions/functions.yaml -x
+
+render-backup: ## Render DatabaseBackup composition locally (requires Docker)
+	crossplane composition render examples/databases/manual-backup.yaml apis/databases/backup-composition.yaml \
+		functions/functions.yaml -x
+
 render-network: ## Render Network composition locally (requires Docker)
 	crossplane composition render examples/networks/network.yaml apis/networks/composition.yaml \
 		functions/functions.yaml -x
@@ -88,12 +107,22 @@ validate-db: ## Render and validate Database composition (requires Docker)
 		functions/functions.yaml -x | \
 		crossplane resource validate apis/ -
 
+validate-db-backup: ## Render and validate backup-enabled Database composition (requires Docker)
+	crossplane composition render examples/databases/backup.yaml apis/databases/composition.yaml \
+		functions/functions.yaml -x | \
+		crossplane resource validate apis/ -
+
+validate-backup: ## Render and validate DatabaseBackup composition (requires Docker)
+	crossplane composition render examples/databases/manual-backup.yaml apis/databases/backup-composition.yaml \
+		functions/functions.yaml -x | \
+		crossplane resource validate apis/ -
+
 validate-network: ## Render and validate Network composition (requires Docker)
 	crossplane composition render examples/networks/network.yaml apis/networks/composition.yaml \
 		functions/functions.yaml -x | \
 		crossplane resource validate apis/ -
 
-validate: validate-app validate-db validate-network ## Render and validate all compositions (requires Docker)
+validate: validate-app validate-db validate-db-backup validate-backup validate-network ## Render and validate all compositions (requires Docker)
 	@echo "All compositions validated successfully"
 
 function-build: ## Build the function binary for the Development render runtime
@@ -126,6 +155,9 @@ function-render: function-build ## Render the function example locally (requires
 	wait $$FNPID 2>/dev/null; \
 	exit $$RC
 
+restart-cnpg: ## Restart CloudNativePG operator (required when snapshot CRDs are installed after the operator)
+	kubectl delete pods -n cnpg-system -l app.kubernetes.io/name=cloudnative-pg --ignore-not-found
+
 status: ## Show cluster and Crossplane status
 	k3d cluster list
 	@echo ""
@@ -135,7 +167,7 @@ status: ## Show cluster and Crossplane status
 	@echo ""
 	kubectl get apps databases -A 2>/dev/null || echo "No apps or databases deployed"
 
-setup: create-cluster install-cnpg install-crossplane install-deps ## Full cluster setup
+setup: create-cluster install-crossplane install-csi install-cnpg install-deps ## Full cluster setup
 	kubectl wait --for=condition=Ready pods --all -n crossplane-system --timeout=180s
 
 teardown: delete-cluster ## Delete resources and cluster

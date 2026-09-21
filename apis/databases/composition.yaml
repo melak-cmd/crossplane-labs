@@ -12,7 +12,7 @@ spec:
   pipeline:
   - step: render-templates
     functionRef:
-      name: function-go-templating
+      name: crossplane-contrib-function-go-templating
     input:
       apiVersion: gotemplating.fn.crossplane.io/v1beta1
       kind: GoTemplate
@@ -30,6 +30,17 @@ spec:
           {{ $storageSize := "1Gi" }}
           {{ if index .observed.composite.resource.spec.parameters "storageSize" }}
           {{ $storageSize = .observed.composite.resource.spec.parameters.storageSize }}
+          {{ end }}
+          {{ $storageClass := "" }}
+          {{ if index .observed.composite.resource.spec.parameters "storageClass" }}
+          {{ $storageClass = .observed.composite.resource.spec.parameters.storageClass }}
+          {{ end }}
+          {{ $backup := index .observed.composite.resource.spec.parameters "backup" }}
+          {{ $backupSchedule := "" }}
+          {{ $snapshotClass := "" }}
+          {{ if $backup }}
+          {{ $backupSchedule = index $backup "schedule" | default "" }}
+          {{ $snapshotClass = index $backup "snapshotClass" | default "" }}
           {{ end }}
           ---
           apiVersion: kubernetes.m.crossplane.io/v1alpha1
@@ -60,9 +71,45 @@ spec:
                       owner: {{ $id }}
                   storage:
                     size: {{ $storageSize }}
+          {{ if $storageClass }}          storageClass: {{ $storageClass }}
+          {{ end }}
+          {{ if $backup }}
+                  backup:
+          {{ if $snapshotClass }}          volumeSnapshot:
+                      className: {{ $snapshotClass }}
+          {{ else }}          volumeSnapshot: {}
+          {{ end }}
+          {{ end }}
             providerConfigRef:
               kind: ProviderConfig
               name: default
+          {{ if $backup }}
+          ---
+          apiVersion: kubernetes.m.crossplane.io/v1alpha1
+          kind: Object
+          metadata:
+            name: {{ $id }}-backup
+            namespace: {{ $namespace }}
+            annotations:
+              {{ setResourceNameAnnotation "scheduled-backup" }}
+          spec:
+            forProvider:
+              manifest:
+                apiVersion: postgresql.cnpg.io/v1
+                kind: ScheduledBackup
+                metadata:
+                  name: {{ $id }}-backup
+                  namespace: {{ $namespace }}
+                spec:
+                  schedule: "{{ $backupSchedule }}"
+                  method: volumeSnapshot
+                  backupOwnerReference: self
+                  cluster:
+                    name: {{ $id }}
+            providerConfigRef:
+              kind: ProviderConfig
+              name: default
+          {{ end }}
           ---
           apiVersion: kaonix.com/v1alpha1
           kind: Database
@@ -71,6 +118,22 @@ spec:
             port: 5432
             dbName: {{ $database }}
             secretName: {{ $id }}-app
+          {{ if $backup }}
+            backup:
+              schedule: "{{ $backupSchedule }}"
+              resourceName: {{ $id }}-backup
+          {{ $cluster := getComposedResource . "cluster" }}
+          {{ $lastBackup := "" }}
+          {{ if $cluster }}
+          {{ $lastBackup = dig "status" "atProvider" "manifest" "status" "lastSuccessfulBackupByMethod" "volumeSnapshot" "" $cluster }}
+          {{ if not $lastBackup }}
+          {{ $lastBackup = dig "status" "atProvider" "manifest" "status" "lastSuccessfulBackup" "" $cluster }}
+          {{ end }}
+          {{ end }}
+          {{ if $lastBackup }}
+              lastSuccessfulBackup: "{{ $lastBackup }}"
+          {{ end }}
+          {{ end }}
   - step: automatically-detect-ready-composed-resources
     functionRef:
-      name: function-auto-ready
+      name: crossplane-contrib-function-auto-ready

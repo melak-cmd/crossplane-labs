@@ -1,0 +1,63 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  labels:
+    type: database-backup
+  name: database-backup-cnpg
+spec:
+  compositeTypeRef:
+    apiVersion: kaonix.com/v1alpha1
+    kind: DatabaseBackup
+  mode: Pipeline
+  pipeline:
+  - step: render-templates
+    functionRef:
+      name: crossplane-contrib-function-go-templating
+    input:
+      apiVersion: gotemplating.fn.crossplane.io/v1beta1
+      kind: GoTemplate
+      source: Inline
+      options:
+        - missingkey=error
+      inline:
+        template: |
+          {{ $id := .observed.composite.resource.spec.id }}
+          {{ $namespace := dig "metadata" "namespace" "default" .observed.composite.resource }}
+          ---
+          apiVersion: kubernetes.m.crossplane.io/v1alpha1
+          kind: Object
+          metadata:
+            name: {{ $id }}-backup-manual
+            namespace: {{ $namespace }}
+            annotations:
+              {{ setResourceNameAnnotation "backup" }}
+          spec:
+            forProvider:
+              manifest:
+                apiVersion: postgresql.cnpg.io/v1
+                kind: Backup
+                metadata:
+                  name: {{ $id }}-backup-manual
+                  namespace: {{ $namespace }}
+                spec:
+                  cluster:
+                    name: {{ $id }}
+                  method: volumeSnapshot
+            providerConfigRef:
+              kind: ProviderConfig
+              name: default
+          ---
+          apiVersion: kaonix.com/v1alpha1
+          kind: DatabaseBackup
+          status:
+            name: {{ $id }}-backup-manual
+          {{ $backup := getComposedResource . "backup" }}
+          {{ if $backup }}
+            phase: {{ dig "status" "atProvider" "manifest" "status" "phase" "" $backup | quote }}
+            startedAt: {{ dig "status" "atProvider" "manifest" "status" "startedAt" "" $backup | quote }}
+            completionTime: {{ dig "status" "atProvider" "manifest" "status" "stoppedAt" "" $backup | quote }}
+            error: {{ dig "status" "atProvider" "manifest" "status" "error" "" $backup | quote }}
+          {{ end }}
+  - step: automatically-detect-ready-composed-resources
+    functionRef:
+      name: crossplane-contrib-function-auto-ready

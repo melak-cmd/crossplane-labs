@@ -1,0 +1,65 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: databasebackups.kaonix.com
+spec:
+  group: kaonix.com
+  names:
+    categories:
+    - crossplane
+    kind: DatabaseBackup
+    plural: databasebackups
+  scope: Namespaced
+  defaultCompositeDeletePolicy: Background
+  defaultCompositionRef:
+    name: database-backup-cnpg
+  defaultCompositionUpdatePolicy: Automatic
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.id
+      name: database
+      type: string
+    - jsonPath: .status.phase
+      name: phase
+      type: string
+    - jsonPath: .status.completionTime
+      name: completed
+      type: string
+    name: v1alpha1
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        description: DatabaseBackup is the Schema for the DatabaseBackup API.
+        properties:
+          spec:
+            description: DatabaseBackupSpec defines the desired state of a backup.
+            properties:
+              id:
+                description: Unique identifier of the Database to back up.
+                type: string
+            required:
+            - id
+            type: object
+          status:
+            description: DatabaseBackupStatus defines the observed state of a backup.
+            properties:
+              completionTime:
+                description: Timestamp when the backup terminated.
+                type: string
+              error:
+                description: Error reported by CloudNativePG when the backup failed.
+                type: string
+              name:
+                description: Name of the underlying CloudNativePG Backup.
+                type: string
+              phase:
+                description: Phase reported by CloudNativePG.
+                type: string
+              startedAt:
+                description: Timestamp when the backup was started.
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
