@@ -12,7 +12,7 @@ spec:
   pipeline:
   - step: render-templates
     functionRef:
-      name: function-go-templating
+      name: crossplane-contrib-function-go-templating
     input:
       apiVersion: gotemplating.fn.crossplane.io/v1beta1
       kind: GoTemplate
@@ -193,4 +193,4 @@ spec:
             networkPolicyName: {{ $id }}
   - step: automatically-detect-ready-composed-resources
     functionRef:
-      name: function-auto-ready
+      name: crossplane-contrib-function-auto-ready

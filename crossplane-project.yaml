@@ -17,7 +17,13 @@ spec:
       apiVersion: pkg.crossplane.io/v1
       kind: Function
       package: ghcr.io/crossplane-contrib/function-auto-ready
-      version: '>=v0.7.0'
+      version: '>=v0.6.9'
+  # - type: xpkg
+  #   xpkg:
+  #     apiVersion: pkg.crossplane.io/v1
+  #     kind: Function
+  #     package: xpkg.crossplane.io/crossplane-contrib/function-auto-ready
+  #     version: '>=v0.6.9'
   - type: xpkg
     xpkg:
       apiVersion: pkg.crossplane.io/v1
@@ -30,12 +36,6 @@ spec:
       kind: Provider
       package: xpkg.crossplane.io/crossplane-contrib/provider-helm
       version: '>=v1.3.0'
-  - type: xpkg
-    xpkg:
-      apiVersion: pkg.crossplane.io/v1
-      kind: Function
-      package: xpkg.crossplane.io/crossplane-contrib/function-auto-ready
-      version: '>=v0.0.0'
   description: |
     Kaonix platform configuration with app, network, and database compositions.
   license: Apache-2.0
