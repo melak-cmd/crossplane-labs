@@ -8,7 +8,7 @@ FUNCTION_IMAGE ?= registry.localhost:5000/$(FUNCTION_NAME)
 
 .PHONY: help create-cluster delete-cluster install-csi install-cnpg install-crossplane install-deps delete setup teardown restart-cnpg \
 	project-build project-push uptest uptest-render render-app render-db render-db-backup render-backup render-network \
-	validate-app validate-db validate-db-backup validate-backup validate-network validate status \
+	validate-app validate-db validate-db-backup validate-backup validate-network validate validate-rbac status \
 	function-build function-test function-lint function-xpkg function-push function-render
 
 help: ## Show this help
@@ -122,7 +122,10 @@ validate-network: ## Render and validate Network composition (requires Docker)
 		functions/functions.yaml -x | \
 		crossplane resource validate apis/ -
 
-validate: validate-app validate-db validate-db-backup validate-backup validate-network ## Render and validate all compositions (requires Docker)
+validate-rbac: ## Validate the composition read contract (downstream resources vs provider RBAC, no Docker)
+	python3 scripts/validate-rbac.py
+
+validate: validate-app validate-db validate-db-backup validate-backup validate-network validate-rbac ## Render and validate all compositions (requires Docker)
 	@echo "All compositions validated successfully"
 
 function-build: ## Build the function binary for the Development render runtime

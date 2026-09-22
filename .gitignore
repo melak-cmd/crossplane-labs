@@ -2,3 +2,7 @@
 .build/
 _output/
 schemas/
+
+# Python
+__pycache__/
+*.pyc
