@@ -33,3 +33,10 @@ metadata:
   name: function-scale
 spec:
   package: registry.localhost:5000/function-scale:v0.1.0
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Function
+metadata:
+  name: function-pause
+spec:
+  package: registry.localhost:5000/function-pause:v0.1.0

@@ -1,0 +1,7 @@
+apiVersion: kaonix.com/v1alpha1
+kind: Database
+metadata:
+  name: orders
+  namespace: platform
+spec:
+  id: orders

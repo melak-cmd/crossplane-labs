@@ -6,3 +6,6 @@ schemas/
 # Python
 __pycache__/
 *.pyc
+
+# Vendored Go dependencies
+functions/function-pause/vendor/

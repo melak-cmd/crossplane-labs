@@ -1,0 +1,27 @@
+apiVersion: ops.crossplane.io/v1alpha1
+kind: Operation
+metadata:
+  name: resume-orders-database
+spec:
+  mode: Pipeline
+  pipeline:
+  - step: pause
+    functionRef:
+      name: kaonix-platformfunction-pause
+    requirements:
+      requiredResources:
+      - requirementName: target
+        apiVersion: kaonix.com/v1alpha1
+        kind: Database
+        name: devops-toolkit-db-backup
+        namespace: platform
+    input:
+      apiVersion: function-pause.fn.kaonix.com/v1beta1
+      kind: Input
+      spec:
+        target:
+          apiVersion: kaonix.com/v1alpha1
+          kind: Database
+          name: devops-toolkit-db-backup
+          namespace: platform
+        paused: false

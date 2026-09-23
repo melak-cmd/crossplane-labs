@@ -3,7 +3,7 @@ PKG_NAME ?= kaonix-platform
 PKG_TAG ?= v0.1.0
 
 FUNCTION_NAME ?= function-scale
-FUNCTION_TAG ?= v0.1.1
+FUNCTION_TAG ?= v0.1.0
 FUNCTION_IMAGE ?= registry.localhost:5000/$(FUNCTION_NAME)
 
 .PHONY: help create-cluster delete-cluster install-csi install-cnpg install-crossplane install-deps delete setup teardown restart-cnpg \
@@ -44,6 +44,7 @@ install-crossplane: ## Install Crossplane
 		--namespace crossplane-system \
 		--create-namespace \
 		--version 2.3.3 \
+		--set args='{--enable-operations}' \
 		--wait
 
 install-deps: ## Install APIs, functions, and providers from source (no package dependency resolution)
@@ -146,7 +147,7 @@ function-xpkg: ## Build the function runtime image (Docker) and xpkg package (re
 
 function-push: function-xpkg ## Push the function image and xpkg to the local registry
 	docker push $(FUNCTION_IMAGE):$(FUNCTION_TAG)
-	cd functions/$(FUNCTION_NAME) && crossplane xpkg push $(FUNCTION_NAME).xpkg $(FUNCTION_IMAGE):$(FUNCTION_TAG)
+	cd functions/$(FUNCTION_NAME) && crossplane xpkg push -f $(FUNCTION_NAME).xpkg $(FUNCTION_IMAGE):$(FUNCTION_TAG)
 
 function-render: function-build ## Render the function example locally (requires Docker)
 	cd functions/$(FUNCTION_NAME) && ./function --insecure >/tmp/function-scale.log 2>&1 & \
