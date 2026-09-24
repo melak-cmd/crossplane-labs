@@ -1,9 +1,8 @@
 CLUSTER_NAME ?= crossplane-labs
 PKG_NAME ?= kaonix-platform
-PKG_TAG ?= v0.1.0
+TAG ?= v0.1.2
 
-FUNCTION_NAME ?= function-scale
-FUNCTION_TAG ?= v0.1.0
+FUNCTION_NAME ?= function-recovery
 FUNCTION_IMAGE ?= registry.localhost:5000/$(FUNCTION_NAME)
 
 .PHONY: help create-cluster delete-cluster install-csi install-cnpg install-crossplane install-deps delete setup teardown restart-cnpg \
@@ -50,6 +49,7 @@ install-crossplane: ## Install Crossplane
 install-deps: ## Install APIs, functions, and providers from source (no package dependency resolution)
 	kubectl create namespace platform --dry-run=client -o yaml | kubectl apply -f -
 	kubectl apply -R -f apis/
+	kubectl apply -f operations/
 	kubectl apply -f functions/
 	kubectl apply -f providers/
 	for i in $$(seq 1 60); do kubectl get crd providerconfigs.kubernetes.m.crossplane.io >/dev/null 2>&1 && break; sleep 3; done
@@ -63,7 +63,7 @@ project-build: ## Build Crossplane project into packages (requires Docker)
 	crossplane project build
 
 project-push: project-build ## Push built project packages to local registry
-	crossplane project push -t $(PKG_TAG)
+	crossplane project push -t $(TAG)
 
 uptest: ## Run e2e tests with uptest
 	KUBECTL=kubectl CROSSPLANE_NAMESPACE=crossplane-system CHAINSAW=chainsaw \
@@ -139,15 +139,15 @@ function-lint: ## Lint the function
 	cd functions/$(FUNCTION_NAME) && golangci-lint run
 
 function-xpkg: ## Build the function runtime image (Docker) and xpkg package (requires Docker)
-	cd functions/$(FUNCTION_NAME) && docker build . --tag=$(FUNCTION_IMAGE):$(FUNCTION_TAG)
+	cd functions/$(FUNCTION_NAME) && docker build . --tag=$(FUNCTION_IMAGE):$(TAG)
 	cd functions/$(FUNCTION_NAME) && crossplane xpkg build \
 		--package-root=package \
-		--embed-runtime-image=$(FUNCTION_IMAGE):$(FUNCTION_TAG) \
+		--embed-runtime-image=$(FUNCTION_IMAGE):$(TAG) \
 		--package-file=$(FUNCTION_NAME).xpkg
 
 function-push: function-xpkg ## Push the function image and xpkg to the local registry
-	docker push $(FUNCTION_IMAGE):$(FUNCTION_TAG)
-	cd functions/$(FUNCTION_NAME) && crossplane xpkg push -f $(FUNCTION_NAME).xpkg $(FUNCTION_IMAGE):$(FUNCTION_TAG)
+	docker push $(FUNCTION_IMAGE):$(TAG)
+	cd functions/$(FUNCTION_NAME) && crossplane xpkg push -f $(FUNCTION_NAME).xpkg $(FUNCTION_IMAGE):$(TAG)
 
 function-render: function-build ## Render the function example locally (requires Docker)
 	cd functions/$(FUNCTION_NAME) && ./function --insecure >/tmp/function-scale.log 2>&1 & \

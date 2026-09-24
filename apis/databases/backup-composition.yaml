@@ -22,12 +22,16 @@ spec:
       inline:
         template: |
           {{ $id := .observed.composite.resource.spec.id }}
+          {{ $backupName := printf "%s-backup-manual" $id }}
+          {{ if index .observed.composite.resource.spec "backupName" }}
+          {{ $backupName = index .observed.composite.resource.spec "backupName" }}
+          {{ end }}
           {{ $namespace := dig "metadata" "namespace" "default" .observed.composite.resource }}
           ---
           apiVersion: kubernetes.m.crossplane.io/v1alpha1
           kind: Object
           metadata:
-            name: {{ $id }}-backup-manual
+            name: {{ $backupName }}
             namespace: {{ $namespace }}
             annotations:
               {{ setResourceNameAnnotation "backup" }}
@@ -37,7 +41,7 @@ spec:
                 apiVersion: postgresql.cnpg.io/v1
                 kind: Backup
                 metadata:
-                  name: {{ $id }}-backup-manual
+                  name: {{ $backupName }}
                   namespace: {{ $namespace }}
                 spec:
                   cluster:
@@ -50,7 +54,7 @@ spec:
           apiVersion: kaonix.com/v1alpha1
           kind: DatabaseBackup
           status:
-            name: {{ $id }}-backup-manual
+            name: {{ $backupName }}
           {{ $backup := getComposedResource . "backup" }}
           {{ if $backup }}
             phase: {{ dig "status" "atProvider" "manifest" "status" "phase" "" $backup | quote }}

@@ -1,0 +1,29 @@
+apiVersion: ops.crossplane.io/v1alpha1
+kind: Operation
+metadata:
+  name: restore-devops-toolkit-db-backup-from-backup
+spec:
+  mode: Pipeline
+  pipeline:
+  - step: recover
+    functionRef:
+      name: kaonix-platformfunction-recovery
+    requirements:
+      requiredResources:
+      - requirementName: recovery-plan
+        apiVersion: v1
+        kind: ConfigMap
+        name: devops-toolkit-db-recovery-plan
+        namespace: platform
+    input:
+      apiVersion: function-recovery.fn.kaonix.com/v1beta1
+      kind: Input
+      spec:
+        mode: restore
+        target:
+          name: devops-toolkit-db-backup-cluster
+          namespace: platform
+        planName: devops-toolkit-db-recovery-plan
+        backup:
+          name: devops-toolkit-db-backup-manual-example
+          namespace: platform

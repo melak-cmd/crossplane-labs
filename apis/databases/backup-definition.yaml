@@ -37,6 +37,9 @@ spec:
               id:
                 description: Unique identifier of the Database to back up.
                 type: string
+              backupName:
+                description: Optional unique name for the underlying CloudNativePG Backup.
+                type: string
             required:
             - id
             type: object

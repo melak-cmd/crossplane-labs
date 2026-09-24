@@ -65,7 +65,7 @@ func (f *Function) RunFunction(_ context.Context, req *fnv1.RunFunctionRequest) 
 
 	// Only the fields we have an opinion about: server-populated fields like
 	// managedFields and resourceVersion must not be sent back on apply.
-	patch := &unstructured.Unstructured{}
+	patch := &unstructured.Unstructured{Object: map[string]interface{}{}}
 	patch.SetAPIVersion(observed.GetAPIVersion())
 	patch.SetKind(observed.GetKind())
 	patch.SetName(observed.GetName())

@@ -1,7 +1,7 @@
 apiVersion: ops.crossplane.io/v1alpha1
 kind: Operation
 metadata:
-  name: pause-orders-database-v2
+  name: pause-devops-toolkit-db-backup
 spec:
   mode: Pipeline
   pipeline:

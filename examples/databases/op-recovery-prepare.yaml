@@ -1,0 +1,46 @@
+apiVersion: ops.crossplane.io/v1alpha1
+kind: Operation
+metadata:
+  name: prepare-devops-toolkit-db-recovery
+spec:
+  mode: Pipeline
+  pipeline:
+  - step: pause-database
+    functionRef:
+      name: kaonix-platformfunction-pause
+    requirements:
+      requiredResources:
+      - requirementName: target
+        apiVersion: kaonix.com/v1alpha1
+        kind: Database
+        name: devops-toolkit-db-backup
+        namespace: platform
+    input:
+      apiVersion: function-pause.fn.kaonix.com/v1beta1
+      kind: Input
+      spec:
+        target:
+          apiVersion: kaonix.com/v1alpha1
+          kind: Database
+          name: devops-toolkit-db-backup
+          namespace: platform
+        paused: true
+  - step: save-cluster-manifest
+    functionRef:
+      name: kaonix-platformfunction-recovery
+    requirements:
+      requiredResources:
+      - requirementName: cluster-object
+        apiVersion: kubernetes.m.crossplane.io/v1alpha1
+        kind: Object
+        name: devops-toolkit-db-backup-cluster
+        namespace: platform
+    input:
+      apiVersion: function-recovery.fn.kaonix.com/v1beta1
+      kind: Input
+      spec:
+        mode: prepare
+        target:
+          name: devops-toolkit-db-backup-cluster
+          namespace: platform
+        planName: devops-toolkit-db-recovery-plan

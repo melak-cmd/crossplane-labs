@@ -1,0 +1,8 @@
+---
+apiVersion: meta.pkg.crossplane.io/v1
+kind: Function
+metadata:
+  name: function-recovery
+spec:
+  capabilities:
+  - operation

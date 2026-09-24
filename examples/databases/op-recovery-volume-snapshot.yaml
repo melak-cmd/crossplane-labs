@@ -1,0 +1,21 @@
+apiVersion: ops.crossplane.io/v1alpha1
+kind: Operation
+metadata:
+  name: recover-orders-from-volume-snapshots
+spec:
+  mode: Pipeline
+  pipeline:
+  - step: recover
+    functionRef:
+      name: function-recovery
+    input:
+      apiVersion: function-recovery.fn.kaonix.com/v1beta1
+      kind: Input
+      spec:
+        target:
+          name: orders-recovery-snapshots
+          namespace: platform
+        volumeSnapshots:
+          data: orders-data-snapshot
+          wal: orders-wal-snapshot
+          storageClass: csi-hostpath-sc

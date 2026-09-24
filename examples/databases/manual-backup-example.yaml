@@ -1,0 +1,8 @@
+apiVersion: kaonix.com/v1alpha1
+kind: DatabaseBackup
+metadata:
+  name: devops-toolkit-db-backup-manual-example
+  namespace: platform
+spec:
+  id: devops-toolkit-db-backup
+  backupName: devops-toolkit-db-backup-manual-example
