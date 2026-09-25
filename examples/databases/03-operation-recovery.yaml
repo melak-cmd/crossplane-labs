@@ -1,7 +1,7 @@
 apiVersion: ops.crossplane.io/v1alpha1
 kind: Operation
 metadata:
-  name: prepare-delete-madmax-recovery
+  name: operation-madmax-recovery
 spec:
   mode: Pipeline
   pipeline:
