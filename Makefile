@@ -1,6 +1,6 @@
 CLUSTER_NAME ?= crossplane-labs
 PKG_NAME ?= kaonix-platform
-TAG ?= v0.1.20
+TAG ?= v0.1.24
 
 FUNCTION_NAME ?= function-recovery
 FUNCTION_IMAGE ?= registry.localhost:5000/$(FUNCTION_NAME)
