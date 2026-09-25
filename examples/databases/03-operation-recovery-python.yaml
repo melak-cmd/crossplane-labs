@@ -1,7 +1,7 @@
 apiVersion: ops.crossplane.io/v1alpha1
 kind: Operation
 metadata:
-  name: operation-madmax-recovery-python
+  name: operation-madmax1-recovery-python
 spec:
   mode: Pipeline
   pipeline:
@@ -13,7 +13,7 @@ spec:
       - requirementName: postgresql
         apiVersion: database.kaonix.inc.fr/v1alpha1
         kind: PostgreSQL
-        name: madmax
+        name: madmax1
         namespace: platform
     input:
       apiVersion: function-recovery-python.fn.kaonix.com/v1beta1
@@ -22,7 +22,7 @@ spec:
         mode: prepare
         target:
           namespace: platform
-        planName: madmax-recovery-plan
+        planName: madmax1-recovery-plan
   - step: delete-cluster
     functionRef:
       name: function-recovery-python
@@ -31,7 +31,7 @@ spec:
       - requirementName: postgresql
         apiVersion: database.kaonix.inc.fr/v1alpha1
         kind: PostgreSQL
-        name: madmax
+        name: madmax1
         namespace: platform
     input:
       apiVersion: function-recovery-python.fn.kaonix.com/v1beta1
@@ -48,12 +48,12 @@ spec:
       - requirementName: postgresql
         apiVersion: database.kaonix.inc.fr/v1alpha1
         kind: PostgreSQL
-        name: madmax
+        name: madmax1
         namespace: platform
       - requirementName: recovery-plan
         apiVersion: v1
         kind: ConfigMap
-        name: madmax-recovery-plan
+        name: madmax1-recovery-plan
         namespace: platform
     input:
       apiVersion: function-recovery-python.fn.kaonix.com/v1beta1
@@ -62,9 +62,9 @@ spec:
         mode: restore
         target:
           namespace: platform
-        planName: madmax-recovery-plan
+        planName: madmax1-recovery-plan
         backup:
-          name: madmax-backup
+          name: madmax1-backup
           namespace: platform
   - step: cleanup-recovery-bootstrap
     functionRef:
@@ -74,7 +74,7 @@ spec:
       - requirementName: postgresql
         apiVersion: database.kaonix.inc.fr/v1alpha1
         kind: PostgreSQL
-        name: madmax
+        name: madmax1
         namespace: platform
     input:
       apiVersion: function-recovery-python.fn.kaonix.com/v1beta1
@@ -91,7 +91,7 @@ spec:
       - requirementName: target
         apiVersion: database.kaonix.inc.fr/v1alpha1
         kind: PostgreSQL
-        name: madmax
+        name: madmax1
         namespace: platform
     input:
       apiVersion: function-pause.fn.kaonix.com/v1beta1
@@ -100,6 +100,6 @@ spec:
         target:
           apiVersion: database.kaonix.inc.fr/v1alpha1
           kind: PostgreSQL
-          name: madmax
+          name: madmax1
           namespace: platform
         paused: false
