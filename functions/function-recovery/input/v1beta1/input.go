@@ -14,6 +14,7 @@ type Input struct {
 }
 
 type InputSpec struct {
+	// +kubebuilder:validation:Enum=prepare;delete;restore;cleanup;prepare-delete
 	Mode            string                  `json:"mode"`
 	Target          ClusterReference        `json:"target"`
 	PlanName        string                  `json:"planName,omitempty"`
@@ -22,8 +23,7 @@ type InputSpec struct {
 }
 
 type ClusterReference struct {
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
+	Name string `json:"-"`
 	// +kubebuilder:validation:MinLength=1
 	Namespace string `json:"namespace"`
 }

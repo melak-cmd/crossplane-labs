@@ -1,5 +1,5 @@
-apiVersion: kaonix.com/v1alpha1
-kind: Database
+apiVersion: database.kaonix.inc.fr/v1alpha1
+kind: PostgreSQL
 metadata:
   name: orders
   namespace: platform

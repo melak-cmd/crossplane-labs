@@ -1,6 +1,6 @@
 CLUSTER_NAME ?= crossplane-labs
 PKG_NAME ?= kaonix-platform
-TAG ?= v0.1.2
+TAG ?= v0.1.12
 
 FUNCTION_NAME ?= function-recovery
 FUNCTION_IMAGE ?= registry.localhost:5000/$(FUNCTION_NAME)
@@ -46,15 +46,11 @@ install-crossplane: ## Install Crossplane
 		--set args='{--enable-operations}' \
 		--wait
 
-install-deps: ## Install APIs, functions, and providers from source (no package dependency resolution)
+install-deps: ## Install APIs, operations, and functions from source
 	kubectl create namespace platform --dry-run=client -o yaml | kubectl apply -f -
 	kubectl apply -R -f apis/
 	kubectl apply -f operations/
 	kubectl apply -f functions/
-	kubectl apply -f providers/
-	for i in $$(seq 1 60); do kubectl get crd providerconfigs.kubernetes.m.crossplane.io >/dev/null 2>&1 && break; sleep 3; done
-	kubectl wait --for=condition=Established crd/providerconfigs.kubernetes.m.crossplane.io --timeout=120s
-	kubectl apply -f providers/providerconfigs/
 
 delete: ## Delete application and database XRs
 	kubectl delete -f examples/ --recursive --ignore-not-found
@@ -84,15 +80,15 @@ render-app: ## Render App composition locally (requires Docker)
 	crossplane composition render examples/apps/app.yaml apis/apps/composition.yaml -x
 
 render-db: ## Render Database composition locally (requires Docker)
-	crossplane composition render examples/databases/postgres.yaml apis/databases/composition.yaml \
+	crossplane composition render examples/databases/01-create-database.yaml apis/databases/composition.yaml \
 		functions/functions.yaml -x
 
 render-db-backup: ## Render backup-enabled Database composition locally (requires Docker)
-	crossplane composition render examples/databases/backup.yaml apis/databases/composition.yaml \
+	crossplane composition render examples/databases/01-create-database.yaml apis/databases/composition.yaml \
 		functions/functions.yaml -x
 
 render-backup: ## Render DatabaseBackup composition locally (requires Docker)
-	crossplane composition render examples/databases/manual-backup.yaml apis/databases/backup-composition.yaml \
+	crossplane composition render examples/databases/02-create-databasebackup.yaml apis/databases/backup-composition.yaml \
 		functions/functions.yaml -x
 
 render-network: ## Render Network composition locally (requires Docker)
@@ -104,17 +100,17 @@ validate-app: ## Render and validate App composition (requires Docker)
 		crossplane resource validate apis/ -
 
 validate-db: ## Render and validate Database composition (requires Docker)
-	crossplane composition render examples/databases/postgres.yaml apis/databases/composition.yaml \
+	crossplane composition render examples/databases/01-create-database.yaml apis/databases/composition.yaml \
 		functions/functions.yaml -x | \
 		crossplane resource validate apis/ -
 
 validate-db-backup: ## Render and validate backup-enabled Database composition (requires Docker)
-	crossplane composition render examples/databases/backup.yaml apis/databases/composition.yaml \
+	crossplane composition render examples/databases/01-create-database.yaml apis/databases/composition.yaml \
 		functions/functions.yaml -x | \
 		crossplane resource validate apis/ -
 
 validate-backup: ## Render and validate DatabaseBackup composition (requires Docker)
-	crossplane composition render examples/databases/manual-backup.yaml apis/databases/backup-composition.yaml \
+	crossplane composition render examples/databases/02-create-databasebackup.yaml apis/databases/backup-composition.yaml \
 		functions/functions.yaml -x | \
 		crossplane resource validate apis/ -
 
@@ -130,7 +126,7 @@ validate: validate-app validate-db validate-db-backup validate-backup validate-n
 	@echo "All compositions validated successfully"
 
 function-build: ## Build the function binary for the Development render runtime
-	cd functions/$(FUNCTION_NAME) && go build -o function .
+	cd functions/$(FUNCTION_NAME) && go build -o function ./cmd/function
 
 function-test: ## Run function unit tests
 	cd functions/$(FUNCTION_NAME) && go test ./...

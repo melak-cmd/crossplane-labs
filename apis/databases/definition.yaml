@@ -1,14 +1,14 @@
 apiVersion: apiextensions.crossplane.io/v2
 kind: CompositeResourceDefinition
 metadata:
-  name: databases.kaonix.com
+  name: postgresqls.database.kaonix.inc.fr
 spec:
-  group: kaonix.com
+  group: database.kaonix.inc.fr
   names:
     categories:
     - crossplane
-    kind: Database
-    plural: databases
+    kind: PostgreSQL
+    plural: postgresqls
   scope: Namespaced
   defaultCompositeDeletePolicy: Background
   defaultCompositionRef:

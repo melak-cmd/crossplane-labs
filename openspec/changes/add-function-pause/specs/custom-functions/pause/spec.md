@@ -10,7 +10,7 @@ The function SHALL accept an `Input` resource with apiVersion `function-pause.fn
 
 #### Scenario: Pause a referenced XR
 
-- **WHEN** an Operation invokes the function with target `{apiVersion: "kaonix.com/v1alpha1", kind: "Database", name: "orders", namespace: "platform"}` and `paused: true`
+- **WHEN** an Operation invokes the function with target `{apiVersion: "database.kaonix.inc.fr/v1alpha1", kind: "PostgreSQL", name: "orders", namespace: "platform"}` and `paused: true`
 - **THEN** the Operation SHALL apply `metadata.annotations["crossplane.io/paused"]: "true"` to that target resource
 
 #### Scenario: Resume a referenced XR

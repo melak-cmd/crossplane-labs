@@ -1,0 +1,8 @@
+apiVersion: database.kaonix.inc.fr/v1alpha1
+kind: DatabaseBackup
+metadata:
+  name: madmax-backup
+  namespace: platform
+spec:
+  id: madmax
+  backupName: madmax-backup

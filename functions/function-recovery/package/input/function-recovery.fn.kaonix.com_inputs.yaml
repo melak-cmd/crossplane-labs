@@ -49,19 +49,21 @@ spec:
                 - name
                 type: object
               mode:
+                enum:
+                - prepare
+                - delete
+                - restore
+                - cleanup
+                - prepare-delete
                 type: string
               planName:
                 type: string
               target:
                 properties:
-                  name:
-                    minLength: 1
-                    type: string
                   namespace:
                     minLength: 1
                     type: string
                 required:
-                - name
                 - namespace
                 type: object
               volumeSnapshots:

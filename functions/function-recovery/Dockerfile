@@ -6,7 +6,7 @@ ENV CGO_ENABLED=0
 ARG TARGETOS
 ARG TARGETARCH
 RUN --mount=target=. --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
-    GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /function .
+    GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /function ./cmd/function
 FROM gcr.io/distroless/static-debian12:nonroot AS image
 WORKDIR /
 COPY --from=build /function /function

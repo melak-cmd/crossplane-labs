@@ -29,8 +29,8 @@ spec:
     requirements:
       requiredResources:
       - requirementName: target
-        apiVersion: kaonix.com/v1alpha1
-        kind: Database
+        apiVersion: database.kaonix.inc.fr/v1alpha1
+        kind: PostgreSQL
         name: orders
         namespace: platform
     input:
@@ -38,8 +38,8 @@ spec:
       kind: Input
       spec:
         target:
-          apiVersion: kaonix.com/v1alpha1
-          kind: Database
+          apiVersion: database.kaonix.inc.fr/v1alpha1
+          kind: PostgreSQL
           name: orders
           namespace: platform
         paused: true

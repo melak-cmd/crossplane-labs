@@ -31,34 +31,9 @@ ${KUBECTL} apply -R -f "${ROOT_DIR}/apis/"
 echo "==> Installing Functions..."
 ${KUBECTL} apply -f "${ROOT_DIR}/functions/"
 
-echo "==> Installing Providers..."
-${KUBECTL} apply -f "${ROOT_DIR}/providers/"
-
 echo "==> Waiting for all crossplane-system pods to be ready..."
 ${KUBECTL} wait --for=condition=Ready pods --all \
   -n "${CROSSPLANE_NAMESPACE}" --timeout=180s
-
-echo "==> Waiting for all providers to be healthy..."
-until ${KUBECTL} get providers -o json \
-  | jq -e '[.items[].status.conditions[] | select(.type=="Healthy" and .status=="True")] | length == .items | not' \
-      >/dev/null 2>&1; do
-  # jq expression above: true when number of Healthy=True equals total providers
-  # If jq fails or condition is false, not all providers ready
-  ready=$(${KUBECTL} get providers -o json \
-    | jq -r '[.items[].status.conditions[] | select(.type=="Healthy" and .status=="True")] | length' 2>/dev/null || echo 0)
-  total=$(${KUBECTL} get providers -o json \
-    | jq -r '.items | length' 2>/dev/null || echo 0)
-  if [ "$ready" -eq "$total" ] && [ "$total" -gt 0 ]; then
-    echo "  All $total providers are healthy."
-    break
-  fi
-  echo "  Waiting for providers... ($ready/$total healthy)"
-  sleep "$RETRY_DELAY"
-done
-
-echo "==> Waiting for provider CRDs..."
-${KUBECTL} wait --for=condition=Established \
-  crd/providerconfigs.kubernetes.m.crossplane.io --timeout=60s
 
 echo "==> Waiting for composition revisions to be synced..."
 until [ "$(${KUBECTL} get compositionrevisions -o json 2>/dev/null \
@@ -68,15 +43,6 @@ until [ "$(${KUBECTL} get compositionrevisions -o json 2>/dev/null \
   sleep "$RETRY_DELAY"
 done
 echo "  Composition revisions are synced."
-
-echo "==> Checking provider webhook endpoints..."
-if ! curl -sL https://raw.githubusercontent.com/crossplane/uptest/main/hack/check_endpoints.sh \
-  -o /tmp/check_endpoints.sh 2>/dev/null; then
-  echo "  WARNING: Could not download check_endpoints.sh, skipping webhook check."
-else
-  chmod +x /tmp/check_endpoints.sh
-  /tmp/check_endpoints.sh
-fi
 
 echo "==> Installing CloudNativePG..."
 helm repo add cnpg https://cloudnative-pg.github.io/charts --force-update
@@ -91,8 +57,5 @@ ${KUBECTL} wait --for=condition=Established \
 echo "==> Creating platform namespace..."
 ${KUBECTL} create namespace platform --dry-run=client -o yaml \
   | ${KUBECTL} apply -f -
-
-echo "==> Creating default ProviderConfig in platform..."
-${KUBECTL} apply -f "${ROOT_DIR}/providers/providerconfigs/"
 
 echo "==> Setup complete."

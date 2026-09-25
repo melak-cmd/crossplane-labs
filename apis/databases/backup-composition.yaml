@@ -6,13 +6,13 @@ metadata:
   name: database-backup-cnpg
 spec:
   compositeTypeRef:
-    apiVersion: kaonix.com/v1alpha1
+    apiVersion: database.kaonix.inc.fr/v1alpha1
     kind: DatabaseBackup
   mode: Pipeline
   pipeline:
   - step: render-templates
     functionRef:
-      name: crossplane-contrib-function-go-templating
+      name: function-go-templating
     input:
       apiVersion: gotemplating.fn.crossplane.io/v1beta1
       kind: GoTemplate
@@ -27,41 +27,33 @@ spec:
           {{ $backupName = index .observed.composite.resource.spec "backupName" }}
           {{ end }}
           {{ $namespace := dig "metadata" "namespace" "default" .observed.composite.resource }}
+          {{ $backup := getComposedResource . "backup" }}
           ---
-          apiVersion: kubernetes.m.crossplane.io/v1alpha1
-          kind: Object
+          apiVersion: postgresql.cnpg.io/v1
+          kind: Backup
           metadata:
             name: {{ $backupName }}
             namespace: {{ $namespace }}
             annotations:
               {{ setResourceNameAnnotation "backup" }}
+            {{ if and $backup (eq (dig "status" "phase" "" $backup) "completed") }}
+              gotemplating.fn.crossplane.io/ready: "True"
+          {{ end }}
           spec:
-            forProvider:
-              manifest:
-                apiVersion: postgresql.cnpg.io/v1
-                kind: Backup
-                metadata:
-                  name: {{ $backupName }}
-                  namespace: {{ $namespace }}
-                spec:
-                  cluster:
-                    name: {{ $id }}
-                  method: volumeSnapshot
-            providerConfigRef:
-              kind: ProviderConfig
-              name: default
+            cluster:
+              name: {{ $id }}
+            method: volumeSnapshot
           ---
-          apiVersion: kaonix.com/v1alpha1
+          apiVersion: database.kaonix.inc.fr/v1alpha1
           kind: DatabaseBackup
           status:
             name: {{ $backupName }}
-          {{ $backup := getComposedResource . "backup" }}
           {{ if $backup }}
-            phase: {{ dig "status" "atProvider" "manifest" "status" "phase" "" $backup | quote }}
-            startedAt: {{ dig "status" "atProvider" "manifest" "status" "startedAt" "" $backup | quote }}
-            completionTime: {{ dig "status" "atProvider" "manifest" "status" "stoppedAt" "" $backup | quote }}
-            error: {{ dig "status" "atProvider" "manifest" "status" "error" "" $backup | quote }}
+            phase: {{ dig "status" "phase" "" $backup | quote }}
+            startedAt: {{ dig "status" "startedAt" "" $backup | quote }}
+            completionTime: {{ dig "status" "stoppedAt" "" $backup | quote }}
+            error: {{ dig "status" "error" "" $backup | quote }}
           {{ end }}
   - step: automatically-detect-ready-composed-resources
     functionRef:
-      name: crossplane-contrib-function-auto-ready
+      name: function-auto-ready

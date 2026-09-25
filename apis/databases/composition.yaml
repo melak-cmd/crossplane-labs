@@ -6,13 +6,13 @@ metadata:
   name: database-cnpg
 spec:
   compositeTypeRef:
-    apiVersion: kaonix.com/v1alpha1
-    kind: Database
+    apiVersion: database.kaonix.inc.fr/v1alpha1
+    kind: PostgreSQL
   mode: Pipeline
   pipeline:
   - step: render-templates
     functionRef:
-      name: crossplane-contrib-function-go-templating
+      name: function-go-templating
     input:
       apiVersion: gotemplating.fn.crossplane.io/v1beta1
       kind: GoTemplate
@@ -43,76 +43,58 @@ spec:
           {{ $snapshotClass = index $backup "snapshotClass" | default "" }}
           {{ end }}
           ---
-          apiVersion: kubernetes.m.crossplane.io/v1alpha1
-          kind: Object
+          apiVersion: postgresql.cnpg.io/v1
+          kind: Cluster
           metadata:
-            name: {{ $id }}-cluster
+            name: {{ $id }}
             namespace: {{ $namespace }}
             annotations:
               {{ setResourceNameAnnotation "cluster" }}
           spec:
-            forProvider:
-              manifest:
-                apiVersion: postgresql.cnpg.io/v1
-                kind: Cluster
-                metadata:
-                  name: {{ $id }}
-                  namespace: {{ $namespace }}
-                spec:
-                  instances: {{ $instances }}
-                  postgresql:
-                    parameters:
-                      max_connections: "200"
-                    pg_hba:
-                    - host all all 10.244.0.0/16 trust
-                  bootstrap:
-                    initdb:
-                      database: {{ $database }}
-                      owner: {{ $id }}
-                  storage:
-                    size: {{ $storageSize }}
-          {{ if $storageClass }}          storageClass: {{ $storageClass }}
+            instances: {{ $instances }}
+            postgresql:
+              parameters:
+                max_connections: "200"
+              pg_hba:
+              - host all all 10.244.0.0/16 trust
+            bootstrap:
+              initdb:
+                database: {{ $database }}
+                owner: {{ $id }}
+            storage:
+              size: {{ $storageSize }}
+          {{ if $storageClass }}
+              storageClass: {{ $storageClass }}
           {{ end }}
           {{ if $backup }}
-                  backup:
-          {{ if $snapshotClass }}          volumeSnapshot:
-                      className: {{ $snapshotClass }}
-          {{ else }}          volumeSnapshot: {}
+            backup:
+          {{ if $snapshotClass }}
+              volumeSnapshot:
+                className: {{ $snapshotClass }}
+          {{ else }}
+              volumeSnapshot: {}
           {{ end }}
           {{ end }}
-            providerConfigRef:
-              kind: ProviderConfig
-              name: default
           {{ if $backup }}
           ---
-          apiVersion: kubernetes.m.crossplane.io/v1alpha1
-          kind: Object
+          apiVersion: postgresql.cnpg.io/v1
+          kind: ScheduledBackup
           metadata:
             name: {{ $id }}-backup
             namespace: {{ $namespace }}
             annotations:
               {{ setResourceNameAnnotation "scheduled-backup" }}
+              gotemplating.fn.crossplane.io/ready: "True"
           spec:
-            forProvider:
-              manifest:
-                apiVersion: postgresql.cnpg.io/v1
-                kind: ScheduledBackup
-                metadata:
-                  name: {{ $id }}-backup
-                  namespace: {{ $namespace }}
-                spec:
-                  schedule: "{{ $backupSchedule }}"
-                  method: volumeSnapshot
-                  backupOwnerReference: self
-                  cluster:
-                    name: {{ $id }}
-            providerConfigRef:
-              kind: ProviderConfig
-              name: default
+            schedule: "{{ $backupSchedule }}"
+            method: volumeSnapshot
+            backupOwnerReference: self
+            cluster:
+              name: {{ $id }}
           {{ end }}
           ---
-          apiVersion: kaonix.com/v1alpha1
-          kind: Database
+          apiVersion: database.kaonix.inc.fr/v1alpha1
+          kind: PostgreSQL
           status:
             host: {{ $id }}-rw.{{ $namespace }}.svc
             port: 5432
@@ -125,9 +107,9 @@ spec:
           {{ $cluster := getComposedResource . "cluster" }}
           {{ $lastBackup := "" }}
           {{ if $cluster }}
-          {{ $lastBackup = dig "status" "atProvider" "manifest" "status" "lastSuccessfulBackupByMethod" "volumeSnapshot" "" $cluster }}
+          {{ $lastBackup = dig "status" "lastSuccessfulBackupByMethod" "volumeSnapshot" "" $cluster }}
           {{ if not $lastBackup }}
-          {{ $lastBackup = dig "status" "atProvider" "manifest" "status" "lastSuccessfulBackup" "" $cluster }}
+          {{ $lastBackup = dig "status" "lastSuccessfulBackup" "" $cluster }}
           {{ end }}
           {{ end }}
           {{ if $lastBackup }}
@@ -136,4 +118,4 @@ spec:
           {{ end }}
   - step: automatically-detect-ready-composed-resources
     functionRef:
-      name: crossplane-contrib-function-auto-ready
+      name: function-auto-ready

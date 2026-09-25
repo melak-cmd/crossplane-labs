@@ -1,8 +1,79 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
+metadata:
+  name: function-recovery-cluster-delete
+rules:
+- apiGroups:
+  - postgresql.cnpg.io
+  resources:
+  - clusters
+  verbs:
+  - get
+  - patch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - create
+  - update
+- apiGroups:
+  - kaonix.com
+  - database.kaonix.inc.fr
+  resources:
+  - postgresqls
+  verbs:
+  - get
+  - patch
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: function-recovery
+  namespace: crossplane-system
+---
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: function-recovery-runtime
+spec:
+  deploymentTemplate:
+    spec:
+      selector:
+        matchLabels:
+          runtime: function-recovery
+      template:
+        metadata:
+          labels:
+            runtime: function-recovery
+        spec:
+          serviceAccountName: function-recovery
+          containers:
+          - name: package-runtime
+            args:
+            - --debug
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: function-recovery-cluster-delete
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: function-recovery-cluster-delete
+subjects:
+- kind: ServiceAccount
+  name: function-recovery
+  namespace: crossplane-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
 metadata:
   name: crossplane-operation-database-access
-  namespace: platform
 rules:
 - apiGroups:
   - postgresql.cnpg.io
@@ -16,27 +87,32 @@ rules:
   - delete
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
-  name: crossplane-operation-cluster-object-access
-  namespace: platform
+  name: crossplane-compose-cnpg-resources
+  labels:
+    rbac.crossplane.io/aggregate-to-crossplane: "true"
 rules:
 - apiGroups:
-  - kubernetes.m.crossplane.io
+  - postgresql.cnpg.io
   resources:
-  - objects
+  - clusters
+  - clusters/status
+  - scheduledbackups
+  - backups
   verbs:
   - get
+  - list
+  - watch
   - create
   - update
   - patch
   - delete
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: crossplane-operation-recovery-plan-access
-  namespace: platform
 rules:
 - apiGroups:
   - ""
@@ -50,13 +126,12 @@ rules:
   - delete
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: crossplane-operation-recovery-plan-access
-  namespace: platform
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
+  kind: ClusterRole
   name: crossplane-operation-recovery-plan-access
 subjects:
 - kind: ServiceAccount
@@ -64,27 +139,12 @@ subjects:
   namespace: crossplane-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: crossplane-operation-cluster-object-access
-  namespace: platform
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: crossplane-operation-cluster-object-access
-subjects:
-- kind: ServiceAccount
-  name: crossplane
-  namespace: crossplane-system
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: crossplane-operation-database-access
-  namespace: platform
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
+  kind: ClusterRole
   name: crossplane-operation-database-access
 subjects:
 - kind: ServiceAccount

@@ -1,0 +1,23 @@
+apiVersion: database.kaonix.inc.fr/v1alpha1
+kind: PostgreSQL
+metadata:
+  name: madmax
+  namespace: platform
+spec:
+  id: madmax
+  parameters:
+    namespace: platform
+    database: devops-toolkit
+    version: "16"
+    size: small
+    instances: 1
+    storageSize: 1Gi
+    # StorageClass for the PostgreSQL PVCs. Volume-snapshot backups require the
+    # provisioner to support snapshots (e.g. a CSI driver); local-path can't.
+    storageClass: csi-hostpath-sc
+    backup:
+      # Cron with seconds. This example runs every day at 02:00.
+      schedule: "0 0 2 * * *"
+      # Optional. Must name a VolumeSnapshotClass available in the cluster;
+      # when omitted CloudNativePG uses the default VolumeSnapshotClass.
+      snapshotClass: csi-hostpath-snapclass

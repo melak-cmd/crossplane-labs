@@ -1,6 +1,6 @@
 ## Context
 
-The Database capability currently exposes a `Database` XR (`databases.kaonix.com`) reconciled by the `database-cnpg` pipeline composition (`function-go-templating` + `function-auto-ready`). The composition renders a single CloudNativePG `Cluster` as a `kubernetes.m.crossplane.io/v1alpha1` Object using the `default` provider-kubernetes ProviderConfig, and writes the XR status inline from template variables. The go-templating step runs with `missingkey=error`, so optional fields must be accessed via guarded `index` lookups (the existing `storageSize` pattern). See proposal.md - Why for motivation.
+The Database capability currently exposes a `PostgreSQL` XR (`postgresqls.database.kaonix.inc.fr`) reconciled by the `database-cnpg` pipeline composition (`function-go-templating` + `function-auto-ready`). The composition renders a single CloudNativePG `Cluster` as a `kubernetes.m.crossplane.io/v1alpha1` Object using the `default` provider-kubernetes ProviderConfig, and writes the XR status inline from template variables. The go-templating step runs with `missingkey=error`, so optional fields must be accessed via guarded `index` lookups (the existing `storageSize` pattern). See proposal.md - Why for motivation.
 
 ## Goals / Non-Goals
 
@@ -36,7 +36,7 @@ The same go-templating step adds `spec.backup.volumeSnapshot` to the composed Cl
 
 ### 4. On-demand DatabaseBackup XR with fixed-name Backup
 
-New XRD `databasebackups.kaonix.com` (namespaced, `spec.id` required). A companion pipeline composition renders a CNPG `Backup` Object named `<id>-backup-manual` (distinct from the scheduled `ScheduledBackup` named `<id>-backup`, so both can coexist for the same database; with `setResourceNameAnnotation` so the composed object name is deterministic), `cluster: {name: <id>}`, `method: volumeSnapshot`, in the same namespace as the `DatabaseBackup` XR. Re-running an on-demand backup means deleting and re-applying the `DatabaseBackup` XR (delete-recreate; documented).
+New XRD `databasebackups.database.kaonix.inc.fr` (namespaced, `spec.id` required). A companion pipeline composition renders a CNPG `Backup` Object named `<id>-backup-manual` (distinct from the scheduled `ScheduledBackup` named `<id>-backup`, so both can coexist for the same database; with `setResourceNameAnnotation` so the composed object name is deterministic), `cluster: {name: <id>}`, `method: volumeSnapshot`, in the same namespace as the `DatabaseBackup` XR. Re-running an on-demand backup means deleting and re-applying the `DatabaseBackup` XR (delete-recreate; documented).
 
 ### 5. Status observability
 

@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Defines the Database capability: a namespaced platform API (`kaonix.com/v1alpha1` Database) that provisions a CloudNativePG PostgreSQL Cluster (with read-write service, port, database name, and credentials Secret) through a Crossplane composition, authored and built as a Crossplane CLI project.
+Defines the Database capability: a namespaced platform API (`database.kaonix.inc.fr/v1alpha1` PostgreSQL) that provisions a CloudNativePG PostgreSQL Cluster (with read-write service, port, database name, and credentials Secret) through a Crossplane composition, authored and built as a Crossplane CLI project.
 
 ## Requirements
 
 ### Requirement: Database API
 
-The Database capability SHALL expose a namespaced Composite Resource of kind `Database` in group `kaonix.com` (version `v1alpha1`, plural `databases`) with a required `spec.id` and a required `spec.parameters` object. Parameters SHALL include `namespace` (default `default`), `database` (default `app`), `version` (default `"16"`), `size` (default `small`; supported values `small`, `medium`, `large`), optional `storageSize` string (overrides the size preset when set), and `instances` (default `1`). The XR status SHALL expose `host`, `port`, `dbName`, and `secretName`.
+The Database capability SHALL expose a namespaced Composite Resource of kind `PostgreSQL` in group `database.kaonix.inc.fr` (version `v1alpha1`, plural `postgresqls`) with a required `spec.id` and a required `spec.parameters` object. Parameters SHALL include `namespace` (default `default`), `database` (default `app`), `version` (default `"16"`), `size` (default `small`; supported values `small`, `medium`, `large`), optional `storageSize` string (overrides the size preset when set), and `instances` (default `1`). The XR status SHALL expose `host`, `port`, `dbName`, and `secretName`.
 
 #### Scenario: Defaults are applied
 
@@ -37,7 +37,7 @@ The Database capability SHALL be authored in the Crossplane project as `apis/dat
 #### Scenario: Project build produces the Database package
 
 - **WHEN** `crossplane project build` is run on the project
-- **THEN** it succeeds without errors and the produced packages contain the `databases.kaonix.com` XRD and the `database-cnpg` composition
+- **THEN** it succeeds without errors and the produced packages contain the `postgresqls.database.kaonix.inc.fr` XRD and the `database-cnpg` composition
 
 #### Scenario: Smoke render in the project layout
 

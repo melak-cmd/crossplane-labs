@@ -1,0 +1,33 @@
+apiVersion: ops.crossplane.io/v1alpha1
+kind: Operation
+metadata:
+  name: restore-madmax-from-backup
+spec:
+  mode: Pipeline
+  pipeline:
+  - step: recover
+    functionRef:
+      name: function-recovery
+    requirements:
+      requiredResources:
+      - requirementName: postgresql
+        apiVersion: database.kaonix.inc.fr/v1alpha1
+        kind: PostgreSQL
+        name: madmax
+        namespace: platform
+      - requirementName: recovery-plan
+        apiVersion: v1
+        kind: ConfigMap
+        name: madmax-recovery-plan
+        namespace: platform
+    input:
+      apiVersion: function-recovery.fn.kaonix.com/v1beta1
+      kind: Input
+      spec:
+        mode: restore
+        target:
+          namespace: platform
+        planName: madmax-recovery-plan
+        backup:
+          name: madmax-backup
+          namespace: platform

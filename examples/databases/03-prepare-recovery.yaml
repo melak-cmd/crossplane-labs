@@ -1,0 +1,42 @@
+apiVersion: ops.crossplane.io/v1alpha1
+kind: Operation
+metadata:
+  name: prepare-delete-madmax-recovery
+spec:
+  mode: Pipeline
+  pipeline:
+  - step: prepare-cluster
+    functionRef:
+      name: function-recovery
+    requirements:
+      requiredResources:
+      - requirementName: postgresql
+        apiVersion: database.kaonix.inc.fr/v1alpha1
+        kind: PostgreSQL
+        name: madmax
+        namespace: platform
+    input:
+      apiVersion: function-recovery.fn.kaonix.com/v1beta1
+      kind: Input
+      spec:
+        mode: prepare
+        target:
+          namespace: platform
+        planName: madmax-recovery-plan
+  - step: delete-cluster
+    functionRef:
+      name: function-recovery
+    requirements:
+      requiredResources:
+      - requirementName: postgresql
+        apiVersion: database.kaonix.inc.fr/v1alpha1
+        kind: PostgreSQL
+        name: madmax
+        namespace: platform
+    input:
+      apiVersion: function-recovery.fn.kaonix.com/v1beta1
+      kind: Input
+      spec:
+        mode: delete
+        target:
+          namespace: platform

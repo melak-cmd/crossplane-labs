@@ -18,7 +18,7 @@ The three platform capabilities (App, Database, Network) are hand-authored XRDs 
 ### New Capabilities
 
 - `apps`: App capability — `kaonix.com/v1alpha1` App XRD and `app-frontend` composition (Deployment + HPA), authored as a Crossplane project (`apis/apps/definition.yaml`, `apis/apps/composition.yaml`) and buildable with the Crossplane CLI.
-- `databases`: Database capability — `kaonix.com/v1alpha1` Database XRD and `database-cnpg` composition (CloudNativePG Cluster + connection Secret), authored as a Crossplane project.
+- `databases`: Database capability — `database.kaonix.inc.fr/v1alpha1` PostgreSQL XRD and `database-cnpg` composition (CloudNativePG Cluster + connection Secret), authored as a Crossplane project.
 - `networks`: Network capability — `kaonix.com/v1alpha1` Network XRD and `network-fullstack` composition (NetworkPolicy, Service, Ingress, ExternalName DNS), authored as a Crossplane project.
 
 ### Modified Capabilities

@@ -59,8 +59,8 @@ spec:
       host: uptest-app.127.0.0.1.nip.io
       path: /
 ---
-apiVersion: kaonix.com/v1alpha1
-kind: Database
+apiVersion: database.kaonix.inc.fr/v1alpha1
+kind: PostgreSQL
 metadata:
   name: uptest-db
   namespace: platform
@@ -77,8 +77,8 @@ spec:
     size: small
     instances: 1
 ---
-apiVersion: kaonix.com/v1alpha1
-kind: Database
+apiVersion: database.kaonix.inc.fr/v1alpha1
+kind: PostgreSQL
 metadata:
   name: uptest-db-multi
   namespace: platform

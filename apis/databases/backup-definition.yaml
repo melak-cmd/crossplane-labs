@@ -1,9 +1,9 @@
 apiVersion: apiextensions.crossplane.io/v2
 kind: CompositeResourceDefinition
 metadata:
-  name: databasebackups.kaonix.com
+  name: databasebackups.database.kaonix.inc.fr
 spec:
-  group: kaonix.com
+  group: database.kaonix.inc.fr
   names:
     categories:
     - crossplane

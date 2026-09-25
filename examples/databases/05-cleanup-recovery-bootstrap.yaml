@@ -1,0 +1,44 @@
+apiVersion: ops.crossplane.io/v1alpha1
+kind: Operation
+metadata:
+  name: cleanup-madmax-recovery-bootstrap
+spec:
+  mode: Pipeline
+  pipeline:
+  - step: cleanup-recovery-bootstrap
+    functionRef:
+      name: function-recovery
+    requirements:
+      requiredResources:
+      - requirementName: postgresql
+        apiVersion: database.kaonix.inc.fr/v1alpha1
+        kind: PostgreSQL
+        name: madmax
+        namespace: platform
+    input:
+      apiVersion: function-recovery.fn.kaonix.com/v1beta1
+      kind: Input
+      spec:
+        mode: cleanup
+        target:
+          namespace: platform
+  - step: resume
+    functionRef:
+      name: function-pause
+    requirements:
+      requiredResources:
+      - requirementName: target
+        apiVersion: database.kaonix.inc.fr/v1alpha1
+        kind: PostgreSQL
+        name: madmax
+        namespace: platform
+    input:
+      apiVersion: function-pause.fn.kaonix.com/v1beta1
+      kind: Input
+      spec:
+        target:
+          apiVersion: database.kaonix.inc.fr/v1alpha1
+          kind: PostgreSQL
+          name: madmax
+          namespace: platform
+        paused: false

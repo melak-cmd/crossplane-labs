@@ -27,7 +27,7 @@ The backup capability SHALL create a CloudNativePG `ScheduledBackup` (`postgresq
 
 ### Requirement: On-demand backups
 
-The backup capability SHALL expose a namespaced Composite Resource of kind `DatabaseBackup` in group `kaonix.com` (version `v1alpha1`, plural `databasebackups`) with a required `spec.id` (the id of an existing Database XR). When reconciled, it SHALL create a CloudNativePG `Backup` (`postgresql.cnpg.io/v1`) for the referenced Cluster using `method: volumeSnapshot`. The DatabaseBackup status SHALL report the backup name, phase, and completion time.
+The backup capability SHALL expose a namespaced Composite Resource of kind `DatabaseBackup` in group `database.kaonix.inc.fr` (version `v1alpha1`, plural `databasebackups`) with a required `spec.id` (the id of an existing PostgreSQL XR). When reconciled, it SHALL create a CloudNativePG `Backup` (`postgresql.cnpg.io/v1`) for the referenced Cluster using `method: volumeSnapshot`. The DatabaseBackup status SHALL report the backup name, phase, and completion time.
 
 #### Scenario: On-demand backup is created
 

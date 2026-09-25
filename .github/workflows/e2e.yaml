@@ -25,7 +25,7 @@ jobs:
         run: crossplane composition render examples/apps/app.yaml apis/apps/composition.yaml functions/functions.yaml -x
 
       - name: Render Database composition
-        run: crossplane composition render examples/databases/postgres.yaml apis/databases/composition.yaml functions/functions.yaml -x
+        run: crossplane composition render examples/databases/01-create-database.yaml apis/databases/composition.yaml functions/functions.yaml -x
 
       - name: Render Network composition
         run: crossplane composition render examples/networks/network.yaml apis/networks/composition.yaml functions/functions.yaml -x
@@ -37,7 +37,7 @@ jobs:
 
       - name: Validate rendered Database
         run: |
-          crossplane composition render examples/databases/postgres.yaml apis/databases/composition.yaml functions/functions.yaml -x | \
+          crossplane composition render examples/databases/01-create-database.yaml apis/databases/composition.yaml functions/functions.yaml -x | \
             crossplane resource validate apis/ -
 
       - name: Validate rendered Network
@@ -88,9 +88,8 @@ jobs:
             --version 2.3.3 \
             --wait
 
-      - name: Install providers and functions
+      - name: Install functions
         run: |
-          kubectl apply -f providers/
           kubectl apply -f functions/
 
       - name: Run uptest

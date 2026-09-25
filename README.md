@@ -33,7 +33,7 @@ make install-csi
 # 3. Install CloudNativePG operator
 make install-cnpg
 
-# 4. Install XRDs, Compositions, functions, providers and ProviderConfig
+# 4. Install XRDs, Compositions, operations, and functions
 make install-deps
 
 # 5. Deploy an app + network
@@ -41,7 +41,7 @@ kubectl apply -f examples/apps/app.yaml
 kubectl apply -f examples/networks/network.yaml
 
 # 6. Deploy a database
-kubectl apply -f examples/databases/postgres.yaml
+kubectl apply -f examples/databases/01-create-database.yaml
 ```
 
 If the CloudNativePG operator was already running when `install-csi` added the snapshot CRDs, restart it instead of reinstalling:
@@ -50,11 +50,16 @@ If the CloudNativePG operator was already running when `install-csi` added the s
 make restart-cnpg   # delete cnpg operator pods; re-enables the volumeSnapshot backup method
 ```
 
-`install-deps` applies the source manifests directly (`apis/`, `functions/`, `providers/`, `providers/providerconfigs/`). It does **not** install the `kaonix-platform` Configuration package, so Crossplane never auto-resolves the package's `dependsOn` functions/providers (they are pinned by the local manifests instead).
+`install-deps` applies the source manifests directly (`apis/`, `operations/`, and `functions/`). Database `Cluster`, `ScheduledBackup`, and `Backup` resources are native composed CRDs managed by Crossplane; no Crossplane providers are required.
+
+On existing clusters, applying these manifests does not uninstall a Provider
+that was installed previously. Hand off databases still managed by
+`kubernetes.m.crossplane.io/Object` resources before removing that Provider;
+deleting those Objects can also delete their underlying CNPG resources.
 
 ## Packaging & Build
 
-The repo is a Crossplane **project** described by `crossplane-project.yaml` at the repo root (it replaces the legacy `crossplane.yaml` package manifest). It pins the same four dependencies as before — `function-go-templating >=v0.12.0`, `function-auto-ready >=v0.7.0`, `provider-kubernetes >=v1.3.0`, `provider-helm >=v1.3.0` — and the repository `registry.localhost:5000/kaonix-platform`.
+The repo is a Crossplane **project** described by `crossplane-project.yaml` at the repo root (it replaces the legacy `crossplane.yaml` package manifest). It declares the `function-go-templating` and `function-auto-ready` dependencies, and the repository `registry.localhost:5000/kaonix-platform`.
 
 ```bash
 make project-build   # crossplane project build → _output/kaonix-platform.xpkg (+ schemas/)
@@ -89,8 +94,6 @@ spec:
     port: 8080
 ```
 
-### Network
-
 ```yaml
 apiVersion: kaonix.com/v1alpha1
 kind: Network
@@ -118,8 +121,8 @@ spec:
 ### Database
 
 ```yaml
-apiVersion: kaonix.com/v1alpha1
-kind: Database
+apiVersion: database.kaonix.inc.fr/v1alpha1
+kind: PostgreSQL
 metadata:
   name: my-db
   namespace: platform
@@ -137,11 +140,14 @@ spec:
 ### Database backups
 
 Backups use the CloudNativePG **volume snapshot** method (no object store or
-credentials required). Scheduled backups are enabled per database:
+credentials required). All CNPG resources are native composed CRDs managed by
+Crossplane. The aggregated `crossplane-compose-cnpg-resources` ClusterRole in
+`operations/rbac.yaml` grants Crossplane access; provider-kubernetes and its
+ProviderConfig are not installed.
 
 ```yaml
-apiVersion: kaonix.com/v1alpha1
-kind: Database
+apiVersion: database.kaonix.inc.fr/v1alpha1
+kind: PostgreSQL
 metadata:
   name: my-db
   namespace: platform
@@ -166,7 +172,7 @@ a `ScheduledBackup` named `<id>-backup`. The `Database` status reports
 On-demand backups use the `DatabaseBackup` XR:
 
 ```yaml
-apiVersion: kaonix.com/v1alpha1
+apiVersion: database.kaonix.inc.fr/v1alpha1
 kind: DatabaseBackup
 metadata:
   name: my-db-manual
@@ -175,13 +181,12 @@ spec:
   id: my-db   # id of the Database XR; the Backup targets Cluster my-db
 ```
 
-This composes a CNPG `Backup` named `<id>-backup-manual` and mirrors its `phase`,
-`startedAt`, `completionTime`, and `error` into the XR status. The name is
-fixed, so to run another on-demand backup delete and re-apply the
-`DatabaseBackup` XR (delete-recreate). The final status is pushed once the
-composed `Backup` is re-observed by the provider; in this lab a fresh reconcile
-of the XR (e.g. an annotation change) picks up `complete`/timestamps if the
-provider observation lags.
+This directly composes the native CNPG `Backup` CRD named
+`<id>-backup-manual` and mirrors its `phase`, `startedAt`, `completionTime`, and
+`error` into the XR status. The name is fixed, so to
+run another on-demand backup delete and re-apply the `DatabaseBackup` XR
+(delete-recreate). The XR becomes ready when CNPG reports
+`status.phase: completed`.
 
 > **Prerequisite:** volume snapshots require a CSI driver that supports
 > snapshots plus a `VolumeSnapshotClass`. `make install-csi` sets this up on the
@@ -234,7 +239,7 @@ cluster identity. To recover a database from a volume-snapshot backup:
 
 ## Project Layout
 
-```
+```text
 crossplane-labs/
 ├── crossplane-project.yaml # Project definition (replaces crossplane.yaml)
 ├── apis/
@@ -244,10 +249,6 @@ crossplane-labs/
 ├── functions/
 │   ├── functions.yaml      # go-templating, auto-ready, patch-and-transform, function-scale
 │   └── function-scale/     # custom Go function (scale composed Deployments)
-├── providers/
-│   ├── kubernetes.yaml     # provider-kubernetes + DeploymentRuntimeConfig
-│   ├── helm.yaml           # provider-helm + DeploymentRuntimeConfig
-│   └── providerconfigs/    # default ProviderConfig (namespace: platform)
 ├── clusters/
 │   └── k3d.yaml            # k3d cluster config
 ├── examples/
@@ -257,7 +258,7 @@ crossplane-labs/
 ├── operations/             # placeholder for Operations manifests
 ├── tests/
 │   └── uptest/
-│       ├── setup.sh        # e2e setup (installs CRDs, providers, CNPG, webhook check)
+│       ├── setup.sh        # e2e setup (installs CRDs and CNPG)
 │       └── app.yaml        # uptest manifest (5 resources, 300s timeout)
 ├── schemas/                # generated dependency schemas (from project build)
 ├── _output/                # generated packages (kaonix-platform.xpkg)
@@ -277,11 +278,11 @@ make uptest-render
 ```
 
 The setup script (`tests/uptest/setup.sh`) handles:
+
 - Applying XRDs, Compositions, and functions
-- Waiting for provider health and composition revisions
-- Provider webhook endpoint validation
+- Waiting for Crossplane function health and composition revisions
 - CloudNativePG installation via Helm
-- Platform namespace and ProviderConfig creation
+- Platform namespace creation
 
 ## Local Render (requires Docker)
 

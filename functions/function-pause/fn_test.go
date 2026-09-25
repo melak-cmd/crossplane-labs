@@ -18,8 +18,8 @@ func pauseInput(paused bool) *structpb.Struct {
 		"kind": "Input",
 		"spec": {
 			"target": {
-				"apiVersion": "kaonix.com/v1alpha1",
-				"kind": "Database",
+				"apiVersion": "database.kaonix.inc.fr/v1alpha1",
+				"kind": "PostgreSQL",
 				"name": "orders",
 				"namespace": "platform"
 			},
@@ -37,8 +37,8 @@ func boolString(value bool) string {
 
 func targetResource(annotations string) *structpb.Struct {
 	return resource.MustStructJSON(`{
-		"apiVersion": "kaonix.com/v1alpha1",
-		"kind": "Database",
+		"apiVersion": "database.kaonix.inc.fr/v1alpha1",
+		"kind": "PostgreSQL",
 		"metadata": {
 			"name": "orders",
 			"namespace": "platform"` + annotations + `
