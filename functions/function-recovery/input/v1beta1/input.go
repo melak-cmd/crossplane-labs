@@ -15,11 +15,10 @@ type Input struct {
 
 type InputSpec struct {
 	// +kubebuilder:validation:Enum=prepare;delete;restore;cleanup;prepare-delete
-	Mode            string                  `json:"mode"`
-	Target          ClusterReference        `json:"target"`
-	PlanName        string                  `json:"planName,omitempty"`
-	Backup          *BackupReference        `json:"backup,omitempty"`
-	VolumeSnapshots *VolumeSnapshotRecovery `json:"volumeSnapshots,omitempty"`
+	Mode     string           `json:"mode"`
+	Target   ClusterReference `json:"target"`
+	PlanName string           `json:"planName,omitempty"`
+	Backup   *BackupReference `json:"backup,omitempty"`
 }
 
 type ClusterReference struct {
@@ -33,13 +32,4 @@ type BackupReference struct {
 	Name string `json:"name"`
 	// +kubebuilder:validation:MinLength=1
 	Namespace string `json:"namespace,omitempty"`
-}
-
-type VolumeSnapshotRecovery struct {
-	// +kubebuilder:validation:MinLength=1
-	Data string `json:"data"`
-	// +kubebuilder:validation:MinLength=1
-	Wal string `json:"wal"`
-	// +kubebuilder:validation:MinLength=1
-	StorageClass string `json:"storageClass"`
 }

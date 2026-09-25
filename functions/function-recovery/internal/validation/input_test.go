@@ -27,7 +27,8 @@ func TestInputRejectsInvalidRecoverySettings(t *testing.T) {
 		{Spec: model.InputSpec{Mode: string(model.OperationPrepare), Target: model.ClusterReference{Name: "orders", Namespace: "platform"}}},
 		{Spec: model.InputSpec{Mode: string(model.OperationDelete), Target: model.ClusterReference{Name: "orders", Namespace: "platform"}, Backup: &model.BackupReference{Name: "backup", Namespace: "platform"}}},
 		{Spec: model.InputSpec{Mode: string(model.OperationRestore), PlanName: "plan", Target: model.ClusterReference{Name: "orders", Namespace: "platform"}}},
-		{Spec: model.InputSpec{Mode: string(model.OperationRestore), PlanName: "plan", Target: model.ClusterReference{Name: "orders", Namespace: "platform"}, Backup: &model.BackupReference{Name: "backup", Namespace: "platform"}, VolumeSnapshots: &model.VolumeSnapshotRecovery{Data: "data", Wal: "wal", StorageClass: "sc"}}},
+		{Spec: model.InputSpec{Mode: string(model.OperationRestore), PlanName: "plan", Target: model.ClusterReference{Name: "orders", Namespace: "platform"}, Backup: &model.BackupReference{Name: "backup"}}},
+		{Spec: model.InputSpec{Mode: string(model.OperationRestore), PlanName: "plan", Target: model.ClusterReference{Name: "orders", Namespace: "platform"}, Backup: &model.BackupReference{Name: "backup", Namespace: "other"}}},
 	}
 	for _, in := range inputs {
 		if err := Input(in); err == nil {

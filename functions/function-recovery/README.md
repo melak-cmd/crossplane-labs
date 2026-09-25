@@ -26,8 +26,7 @@ overwriting it. Cleanup uses the same client to remove only
 to the same CLI implementation.
 
 A Crossplane Operation Function that prepares and restores a CNPG `Cluster`
-directly, using exactly one recovery source: a CNPG `Backup` or a pair of data
-and WAL `VolumeSnapshot` objects.
+directly from a CNPG `Backup`.
 
 Recovery can use two ordered Operation steps: `prepare` pauses the Database XR
 and persists a copy of the current CNPG Cluster to a ConfigMap; when it returns
@@ -58,24 +57,14 @@ spec:
     namespace: platform
 ```
 
-Use either `backup` or `volumeSnapshots`, never both:
-
-```yaml
-volumeSnapshots:
-  data: orders-data-snapshot
-  wal: orders-wal-snapshot
-  storageClass: csi-hostpath-sc
-```
-
 For `prepare`, provide `mode: prepare`, the CNPG Cluster target, and
 `planName`; it pauses the Database and persists the plan before returning.
 For `delete`, provide `mode: delete` and the Cluster target. This deletes the
 live CNPG Cluster and is destructive.
 For `restore`, provide
 `mode: restore`, the same Cluster target,
-the plan name, and exactly one complete recovery source. Backup name and
-namespace are required. VolumeSnapshot data, WAL, and storage class are all
-required. For `cleanup`, provide `mode: cleanup` and the Cluster target; it
+the plan name, and a Backup reference with its name and namespace. The Backup
+must be in the same namespace as the target. For `cleanup`, provide `mode: cleanup` and the Cluster target; it
 removes only `spec.bootstrap.recovery` and succeeds if that field is already
 absent. The function validates recovery source fields but does not check that
 the referenced source resources exist.

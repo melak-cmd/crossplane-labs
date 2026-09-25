@@ -49,6 +49,9 @@ func RecoveryPlan(in *model.Input, cluster *unstructured.Unstructured) (*unstruc
 }
 
 func RestoreCluster(in *model.Input, plan *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+	if in.Spec.Backup == nil {
+		return nil, fmt.Errorf("restore mode requires a Backup reference")
+	}
 	data, found, err := unstructured.NestedStringMap(plan.Object, "data")
 	if err != nil || !found || data[planDataKey] == "" {
 		return nil, fmt.Errorf("recovery plan does not contain manifest.json")
@@ -65,14 +68,7 @@ func RestoreCluster(in *model.Input, plan *unstructured.Unstructured) (*unstruct
 	if bootstrap == nil {
 		bootstrap = map[string]interface{}{}
 	}
-	if in.Spec.Backup != nil {
-		bootstrap["recovery"] = map[string]interface{}{"backup": map[string]interface{}{"name": in.Spec.Backup.Name}}
-	} else {
-		bootstrap["recovery"] = map[string]interface{}{"volumeSnapshots": map[string]interface{}{
-			"storage":    map[string]interface{}{"storageClass": in.Spec.VolumeSnapshots.StorageClass, "volumeSnapshot": map[string]interface{}{"name": in.Spec.VolumeSnapshots.Data}},
-			"walStorage": map[string]interface{}{"volumeSnapshot": map[string]interface{}{"name": in.Spec.VolumeSnapshots.Wal}},
-		}}
-	}
+	bootstrap["recovery"] = map[string]interface{}{"backup": map[string]interface{}{"name": in.Spec.Backup.Name}}
 	if err := unstructured.SetNestedMap(manifest, bootstrap, "spec", "bootstrap"); err != nil {
 		return nil, fmt.Errorf("cannot set recovery bootstrap: %w", err)
 	}

@@ -66,22 +66,6 @@ spec:
                 required:
                 - namespace
                 type: object
-              volumeSnapshots:
-                properties:
-                  data:
-                    minLength: 1
-                    type: string
-                  storageClass:
-                    minLength: 1
-                    type: string
-                  wal:
-                    minLength: 1
-                    type: string
-                required:
-                - data
-                - storageClass
-                - wal
-                type: object
             required:
             - mode
             - target

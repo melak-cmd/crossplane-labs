@@ -14,8 +14,8 @@ func Input(in *model.Input) error {
 		return fmt.Errorf("mode must be prepare, restore, delete, cleanup, or prepare-delete")
 	}
 	if in.Spec.Mode == string(model.OperationDelete) || in.Spec.Mode == string(model.OperationCleanup) {
-		if in.Spec.Backup != nil || in.Spec.VolumeSnapshots != nil {
-			return fmt.Errorf("delete mode does not accept recovery sources")
+		if in.Spec.Backup != nil {
+			return fmt.Errorf("delete and cleanup modes do not accept a Backup reference")
 		}
 		return nil
 	}
@@ -23,24 +23,19 @@ func Input(in *model.Input) error {
 		return fmt.Errorf("planName is required")
 	}
 	if in.Spec.Mode == string(model.OperationPrepare) || in.Spec.Mode == string(model.OperationPrepareDelete) {
-		if in.Spec.Backup != nil || in.Spec.VolumeSnapshots != nil {
-			return fmt.Errorf("prepare modes do not accept recovery sources")
+		if in.Spec.Backup != nil {
+			return fmt.Errorf("prepare modes do not accept a Backup reference")
 		}
 		return nil
 	}
-	backup := in.Spec.Backup != nil
-	snapshots := in.Spec.VolumeSnapshots != nil
-	if backup == snapshots {
-		return fmt.Errorf("exactly one of backup or volumeSnapshots is required")
+	if in.Spec.Backup == nil {
+		return fmt.Errorf("restore mode requires a Backup reference")
 	}
-	if backup && (in.Spec.Backup.Name == "" || in.Spec.Backup.Namespace == "") {
+	if in.Spec.Backup.Name == "" || in.Spec.Backup.Namespace == "" {
 		return fmt.Errorf("backup name and namespace are required")
 	}
-	if backup && in.Spec.Backup.Namespace != in.Spec.Target.Namespace {
+	if in.Spec.Backup.Namespace != in.Spec.Target.Namespace {
 		return fmt.Errorf("backup and target must use the same namespace")
-	}
-	if snapshots && (in.Spec.VolumeSnapshots.Data == "" || in.Spec.VolumeSnapshots.Wal == "" || in.Spec.VolumeSnapshots.StorageClass == "") {
-		return fmt.Errorf("volumeSnapshots data, wal, and storageClass are required")
 	}
 	return nil
 }
