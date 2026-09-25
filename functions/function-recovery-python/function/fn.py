@@ -34,6 +34,11 @@ from function.recovery import (
     parse_input,
     validate_input,
 )
+from function.status import (
+    FunctionResponseStatusObserver,
+    OperationStatusEvent,
+    OperationStatusSubject,
+)
 
 class FunctionRunner(grpcv1.FunctionRunnerService):
     """Handle recovery operations over the Crossplane Function protocol."""
@@ -52,6 +57,8 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         log.info("Running recovery function")
 
         rsp = response.to(req)
+        status_subject = OperationStatusSubject()
+        status_subject.attach(FunctionResponseStatusObserver(rsp))
         input_data = resource.struct_to_dict(req.input)
         operation = _operation_mode(input_data)
 
@@ -69,7 +76,9 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                         operation=operation, message=message
                     ),
                 )
-                _set_operation_output(rsp, operation, OPERATION_STATUS_FAILED, message)
+                status_subject.notify(
+                    OperationStatusEvent(operation, OPERATION_STATUS_FAILED, message)
+                )
                 return rsp
             postgresql = postgresql_resources[0]
             cluster_name = cluster_name_from_postgresql(postgresql)
@@ -77,14 +86,16 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
             validate_input(function_input)
         except InputError as exc:
             _set_condition(rsp, fnv1.STATUS_CONDITION_FALSE, REASON_INVALID, str(exc))
-            _set_operation_output(
-                rsp, operation, OPERATION_STATUS_FAILED, str(exc)
+            status_subject.notify(
+                OperationStatusEvent(operation, OPERATION_STATUS_FAILED, str(exc))
             )
             return rsp
         except Exception as exc:
             message = MESSAGE_INPUT_READ_FAILURE.format(error=exc)
             response.fatal(rsp, message)
-            _set_operation_output(rsp, operation, OPERATION_STATUS_FAILED, message)
+            status_subject.notify(
+                OperationStatusEvent(operation, OPERATION_STATUS_FAILED, message)
+            )
             return rsp
 
         log.info(
@@ -108,7 +119,9 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                     operation=operation, message=message
                 ),
             )
-            _set_operation_output(rsp, operation, OPERATION_STATUS_FAILED, message)
+            status_subject.notify(
+                OperationStatusEvent(operation, OPERATION_STATUS_FAILED, message)
+            )
         except InvalidOperationInput as exc:
             message = str(exc)
             _set_condition(
@@ -119,13 +132,17 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                     operation=operation, message=message
                 ),
             )
-            _set_operation_output(rsp, operation, OPERATION_STATUS_FAILED, message)
+            status_subject.notify(
+                OperationStatusEvent(operation, OPERATION_STATUS_FAILED, message)
+            )
         except Exception as exc:
             message = MESSAGE_OPERATION_EXECUTION_FAILURE.format(
                 operation=operation, error=exc
             )
             response.fatal(rsp, message)
-            _set_operation_output(rsp, operation, OPERATION_STATUS_FAILED, message)
+            status_subject.notify(
+                OperationStatusEvent(operation, OPERATION_STATUS_FAILED, message)
+            )
         else:
             message = MESSAGE_OPERATION_SUCCESS.format(operation=operation)
             _set_condition(
@@ -134,7 +151,11 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                 REASON_SUCCESS,
                 message,
             )
-            _set_operation_output(rsp, operation, OPERATION_STATUS_SUCCEEDED, message)
+            status_subject.notify(
+                OperationStatusEvent(
+                    operation, OPERATION_STATUS_SUCCEEDED, message
+                )
+            )
 
         return rsp
 
@@ -145,15 +166,6 @@ def _operation_mode(value: dict) -> str:
         return OPERATION_UNKNOWN
     mode = spec.get("mode")
     return mode if isinstance(mode, str) and mode else OPERATION_UNKNOWN
-
-
-def _set_operation_output(
-    rsp: fnv1.RunFunctionResponse, operation: str, status: str, message: str
-) -> None:
-    response.set_output(
-        rsp,
-        {"operation": operation, "status": status, "message": message},
-    )
 
 
 def _set_condition(

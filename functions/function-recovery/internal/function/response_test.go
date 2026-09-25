@@ -11,8 +11,9 @@ import (
 
 func TestSucceedOperationSetsOperationOutput(t *testing.T) {
 	rsp := &fnv1.RunFunctionResponse{}
+	statusSubject := newOperationStatusSubject(rsp)
 
-	SucceedOperation(rsp, model.OperationPrepare)
+	SucceedOperation(rsp, statusSubject, model.OperationPrepare)
 
 	if got, want := rsp.GetOutput().AsMap(), map[string]interface{}{
 		"operation": "prepare",
@@ -25,8 +26,9 @@ func TestSucceedOperationSetsOperationOutput(t *testing.T) {
 
 func TestInvalidOperationSetsFailedOutput(t *testing.T) {
 	rsp := &fnv1.RunFunctionResponse{}
+	statusSubject := newOperationStatusSubject(rsp)
 
-	InvalidOperation(rsp, model.OperationRestore, errors.New("invalid recovery plan"))
+	InvalidOperation(rsp, statusSubject, model.OperationRestore, errors.New("invalid recovery plan"))
 
 	if got, want := rsp.GetOutput().AsMap(), map[string]interface{}{
 		"operation": "restore",

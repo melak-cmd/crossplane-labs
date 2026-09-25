@@ -21,52 +21,44 @@ func Succeed(rsp *fnv1.RunFunctionResponse) {
 	response.ConditionTrue(rsp, model.ConditionSuccess, model.ReasonSuccess)
 }
 
-func SucceedOperation(rsp *fnv1.RunFunctionResponse, operation model.Operation) {
+func SucceedOperation(
+	rsp *fnv1.RunFunctionResponse,
+	statusSubject *OperationStatusSubject,
+	operation model.Operation,
+) {
 	Succeed(rsp)
-	setOperationOutput(
-		rsp,
-		operation,
-		model.OperationStatusSucceeded,
-		fmt.Sprintf(model.MessageOperationSucceeded, operation),
-	)
+	statusSubject.Notify(OperationStatusEvent{
+		Operation: operation,
+		Status:    model.OperationStatusSucceeded,
+		Message:   fmt.Sprintf(model.MessageOperationSucceeded, operation),
+	})
 }
 
-func InvalidOperation(rsp *fnv1.RunFunctionResponse, operation model.Operation, err error) {
+func InvalidOperation(
+	rsp *fnv1.RunFunctionResponse,
+	statusSubject *OperationStatusSubject,
+	operation model.Operation,
+	err error,
+) {
 	Invalid(rsp, err)
-	setOperationOutput(
-		rsp,
-		operation,
-		model.OperationStatusFailed,
-		fmt.Sprintf(model.MessageOperationFailed, operation, err),
-	)
+	statusSubject.Notify(OperationStatusEvent{
+		Operation: operation,
+		Status:    model.OperationStatusFailed,
+		Message:   fmt.Sprintf(model.MessageOperationFailed, operation, err),
+	})
 }
 
 func FatalOperation(
 	rsp *fnv1.RunFunctionResponse,
+	statusSubject *OperationStatusSubject,
 	operation model.Operation,
 	err error,
 	message string,
 ) {
 	Fatal(rsp, err, message)
-	setOperationOutput(
-		rsp,
-		operation,
-		model.OperationStatusFailed,
-		fmt.Sprintf(model.MessageOperationFailed, operation, fmt.Sprintf("%s: %v", message, err)),
-	)
-}
-
-func setOperationOutput(
-	rsp *fnv1.RunFunctionResponse,
-	operation model.Operation,
-	status string,
-	message string,
-) {
-	if err := response.SetOutput(rsp, map[string]string{
-		"operation": string(operation),
-		"status":    status,
-		"message":   message,
-	}); err != nil {
-		Fatal(rsp, err, "cannot set operation status output")
-	}
+	statusSubject.Notify(OperationStatusEvent{
+		Operation: operation,
+		Status:    model.OperationStatusFailed,
+		Message:   fmt.Sprintf(model.MessageOperationFailed, operation, fmt.Sprintf("%s: %v", message, err)),
+	})
 }
