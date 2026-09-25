@@ -6,6 +6,8 @@ from crossplane.function import logging, resource
 from crossplane.function.proto.v1 import run_function_pb2 as fnv1
 
 from function import fn
+from function.operations import OperationContext, OperationDispatcher
+from function.recovery import RecoveryInput
 
 
 class TestFunctionRunner(unittest.IsolatedAsyncioTestCase):
@@ -122,6 +124,58 @@ class TestFunctionRunner(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(fnv1.STATUS_CONDITION_FALSE, rsp.conditions[0].status)
         self.assertEqual("InvalidRecoveryInput", rsp.conditions[0].reason)
         client.create_restored_cluster.assert_not_called()
+
+
+class TestOperationDispatcher(unittest.TestCase):
+    def test_prepare_delete_persists_plan_before_deleting_cluster(self) -> None:
+        client = Mock()
+        client.get_cluster.return_value = {
+            "apiVersion": "postgresql.cnpg.io/v1",
+            "kind": "Cluster",
+            "metadata": {"name": "orders-primary", "namespace": "platform"},
+        }
+        context = OperationContext(
+            RecoveryInput(
+                mode="prepare-delete",
+                namespace="platform",
+                plan_name="orders-plan",
+                target_name="orders-primary",
+            ),
+            postgresql={},
+            request=fnv1.RunFunctionRequest(),
+            cluster_client=client,
+        )
+
+        OperationDispatcher().execute(context)
+
+        self.assertEqual(
+            ["get_cluster", "prepare_recovery", "delete_and_wait"],
+            [call.args[0] for call in client.method_calls],
+        )
+
+    def test_delete_and_cleanup_dispatch_to_their_commands(self) -> None:
+        for mode, method in (
+            ("delete", "delete_and_wait"),
+            ("cleanup", "remove_recovery"),
+        ):
+            with self.subTest(mode=mode):
+                client = Mock()
+                context = OperationContext(
+                    RecoveryInput(
+                        mode=mode,
+                        namespace="platform",
+                        target_name="orders-primary",
+                    ),
+                    postgresql={},
+                    request=fnv1.RunFunctionRequest(),
+                    cluster_client=client,
+                )
+
+                OperationDispatcher().execute(context)
+
+                getattr(client, method).assert_called_once_with(
+                    "platform", "orders-primary"
+                )
 
 
 if __name__ == "__main__":

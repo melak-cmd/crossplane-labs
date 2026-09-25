@@ -8,10 +8,14 @@ from crossplane.function.proto.v1 import run_function_pb2 as fnv1
 from crossplane.function.proto.v1 import run_function_pb2_grpc as grpcv1
 
 from function.kubernetes import KubernetesClient
+from function.operations import (
+    InvalidOperationInput,
+    OperationContext,
+    OperationDispatcher,
+    RequiredResourceNotResolved,
+)
 from function.recovery import (
     InputError,
-    build_recovery_plan,
-    build_restored_cluster,
     cluster_name_from_postgresql,
     parse_input,
     validate_input,
@@ -30,6 +34,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         """Create a runner, optionally injecting a Kubernetes client for tests."""
         self.log = logging.get_logger()
         self.cluster_client = cluster_client or KubernetesClient()
+        self.operation_dispatcher = OperationDispatcher()
 
     async def RunFunction(
         self, req: fnv1.RunFunctionRequest, _: grpc.aio.ServicerContext
@@ -70,52 +75,17 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         )
         try:
             await asyncio.to_thread(
-                self._run_operation, function_input, postgresql, req, rsp
+                self.operation_dispatcher.execute,
+                OperationContext(function_input, postgresql, req, self.cluster_client),
             )
+        except RequiredResourceNotResolved as exc:
+            _set_condition(rsp, fnv1.STATUS_CONDITION_FALSE, REASON_UNRESOLVED, str(exc))
+        except InvalidOperationInput as exc:
+            _set_condition(rsp, fnv1.STATUS_CONDITION_FALSE, REASON_INVALID, str(exc))
         except Exception as exc:
             response.fatal(rsp, f"cannot execute recovery operation: {exc}")
 
         return rsp
-
-    def _run_operation(
-        self,
-        function_input,
-        postgresql: dict,
-        req: fnv1.RunFunctionRequest,
-        rsp: fnv1.RunFunctionResponse,
-    ) -> None:
-        namespace = function_input.namespace
-        name = function_input.target_name
-
-        if function_input.mode in {"prepare", "prepare-delete"}:
-            cluster = self.cluster_client.get_cluster(namespace, name)
-            plan = build_recovery_plan(function_input, cluster)
-            self.cluster_client.prepare_recovery(postgresql, plan)
-            if function_input.mode == "prepare-delete":
-                self.cluster_client.delete_and_wait(namespace, name)
-        elif function_input.mode == "delete":
-            self.cluster_client.delete_and_wait(namespace, name)
-        elif function_input.mode == "restore":
-            plans = request.get_required_resources(req, "recovery-plan")
-            if len(plans) != 1:
-                _set_condition(
-                    rsp,
-                    fnv1.STATUS_CONDITION_FALSE,
-                    REASON_UNRESOLVED,
-                    "required recovery resource is not resolved",
-                )
-                return
-            try:
-                cluster = build_restored_cluster(function_input, plans[0])
-            except InputError as exc:
-                _set_condition(
-                    rsp, fnv1.STATUS_CONDITION_FALSE, REASON_INVALID, str(exc)
-                )
-                return
-            self.cluster_client.create_restored_cluster(cluster)
-        elif function_input.mode == "cleanup":
-            self.cluster_client.remove_recovery(namespace, name)
-
         _set_condition(rsp, fnv1.STATUS_CONDITION_TRUE, REASON_SUCCESS)
 
 
