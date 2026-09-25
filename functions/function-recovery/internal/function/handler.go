@@ -40,31 +40,31 @@ func (h *Handler) RunFunction(ctx context.Context, req *fnv1.RunFunctionRequest)
 	rsp := response.To(req, response.DefaultTTL)
 	in, err := ReadInput(req)
 	if err != nil {
-		Fatal(rsp, err, "cannot get recovery input")
+		FatalOperation(rsp, model.OperationUnknown, err, "cannot get recovery input")
 		return rsp, nil
 	}
 	database, resolved, err := ReadRequiredResource(req, "postgresql")
 	if err != nil {
-		Fatal(rsp, err, "cannot get PostgreSQL XR")
+		FatalOperation(rsp, model.Operation(in.Spec.Mode), err, "cannot get PostgreSQL XR")
 		return rsp, nil
 	}
 	if !resolved {
-		Invalid(rsp, fmt.Errorf("required PostgreSQL XR is unresolved"))
+		InvalidOperation(rsp, model.Operation(in.Spec.Mode), fmt.Errorf("required PostgreSQL XR is unresolved"))
 		return rsp, nil
 	}
 	clusterName, err := ReadClusterName(database)
 	if err != nil {
-		Invalid(rsp, err)
+		InvalidOperation(rsp, model.Operation(in.Spec.Mode), err)
 		return rsp, nil
 	}
 	in.Spec.Target.Name = clusterName
 	if err := validation.Input(in); err != nil {
-		Invalid(rsp, err)
+		InvalidOperation(rsp, model.Operation(in.Spec.Mode), err)
 		return rsp, nil
 	}
 	op, ok := operations.Lookup(model.Operation(in.Spec.Mode))
 	if !ok {
-		Invalid(rsp, errUnknownOperation)
+		InvalidOperation(rsp, model.Operation(in.Spec.Mode), errUnknownOperation)
 		return rsp, nil
 	}
 	if h.log != nil {
@@ -72,7 +72,7 @@ func (h *Handler) RunFunction(ctx context.Context, req *fnv1.RunFunctionRequest)
 	}
 	visitor := operationVisitor{ctx: ctx, handler: h, req: req, rsp: rsp, input: in, postgresql: database}
 	if err := op.Accept(visitor); err != nil {
-		Fatal(rsp, err, "cannot execute recovery operation")
+		FatalOperation(rsp, model.Operation(in.Spec.Mode), err, "cannot execute recovery operation")
 		return rsp, nil
 	}
 	return rsp, nil
