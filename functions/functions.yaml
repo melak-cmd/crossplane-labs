@@ -30,3 +30,14 @@ spec:
     apiVersion: pkg.crossplane.io/v1beta1
     kind: DeploymentRuntimeConfig
     name: function-recovery-runtime
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Function
+metadata:
+  name: function-recovery-python
+spec:
+  package: registry.localhost:5000/function-recovery-python:v0.1.19
+  runtimeConfigRef:
+    apiVersion: pkg.crossplane.io/v1beta1
+    kind: DeploymentRuntimeConfig
+    name: function-recovery-runtime
