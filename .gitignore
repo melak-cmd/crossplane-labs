@@ -10,4 +10,5 @@ __pycache__/
 # Vendored Go dependencies
 functions/function-pause/vendor/
 
+.venv
 *.xpkg
