@@ -60,6 +60,18 @@ class TestFunctionRunner(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(fnv1.STATUS_CONDITION_TRUE, rsp.conditions[0].status)
         self.assertEqual("FunctionSuccess", rsp.conditions[0].type)
+        self.assertEqual("Success", rsp.conditions[0].reason)
+        self.assertEqual(
+            "prepare operation completed successfully", rsp.conditions[0].message
+        )
+        self.assertEqual(
+            {
+                "operation": "prepare",
+                "status": "Succeeded",
+                "message": "prepare operation completed successfully",
+            },
+            resource.struct_to_dict(rsp.output),
+        )
         client.prepare_recovery.assert_called_once()
         persisted_plan = client.prepare_recovery.call_args.args[1]
         self.assertEqual("orders-plan", persisted_plan["metadata"]["name"])
@@ -82,6 +94,14 @@ class TestFunctionRunner(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(fnv1.STATUS_CONDITION_FALSE, rsp.conditions[0].status)
         self.assertEqual("InvalidRecoveryInput", rsp.conditions[0].reason)
         self.assertIn("PostgreSQL XR is unresolved", rsp.conditions[0].message)
+        self.assertEqual(
+            {
+                "operation": "delete",
+                "status": "Failed",
+                "message": "required PostgreSQL XR is unresolved",
+            },
+            resource.struct_to_dict(rsp.output),
+        )
 
     async def test_invalid_recovery_plan_returns_false_condition(self) -> None:
         postgresql = {

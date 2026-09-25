@@ -1,4 +1,6 @@
-"""Command objects for the supported recovery operations."""
+"""Visitor-based execution for the supported recovery operations."""
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -25,7 +27,7 @@ class InvalidOperationInput(Exception):
 
 @dataclass(frozen=True)
 class OperationContext:
-    """Dependencies and request data available to an operation command."""
+    """Dependencies and request data available to an operation visitor."""
 
     function_input: RecoveryInput
     postgresql: dict[str, Any]
@@ -33,42 +35,95 @@ class OperationContext:
     cluster_client: KubernetesClient
 
 
-class RecoveryCommand(Protocol):
-    """Execute one recovery action using the supplied operation context."""
+class OperationVisitor(Protocol):
+    """Visit each supported recovery operation."""
 
-    def execute(self, context: OperationContext) -> None: ...
+    def visit_prepare(
+        self, operation: PrepareOperation, context: OperationContext
+    ) -> None: ...
+    def visit_prepare_delete(
+        self, operation: PrepareDeleteOperation, context: OperationContext
+    ) -> None: ...
+    def visit_delete(
+        self, operation: DeleteOperation, context: OperationContext
+    ) -> None: ...
+    def visit_restore(
+        self, operation: RestoreOperation, context: OperationContext
+    ) -> None: ...
+    def visit_cleanup(
+        self, operation: CleanupOperation, context: OperationContext
+    ) -> None: ...
 
 
-class PrepareCommand:
-    """Pause the PostgreSQL XR and persist the current Cluster manifest."""
+class RecoveryOperation(Protocol):
+    """Accept a visitor that performs the operation."""
 
-    def execute(self, context: OperationContext) -> None:
+    def accept(
+        self, visitor: OperationVisitor, context: OperationContext
+    ) -> None: ...
+
+
+class PrepareOperation:
+    """Visitor element for preparing recovery."""
+
+    def accept(self, visitor: OperationVisitor, context: OperationContext) -> None:
+        visitor.visit_prepare(self, context)
+
+
+class PrepareDeleteOperation:
+    """Visitor element for preparing recovery and deleting the Cluster."""
+
+    def accept(self, visitor: OperationVisitor, context: OperationContext) -> None:
+        visitor.visit_prepare_delete(self, context)
+
+
+class DeleteOperation:
+    """Visitor element for deleting the target Cluster."""
+
+    def accept(self, visitor: OperationVisitor, context: OperationContext) -> None:
+        visitor.visit_delete(self, context)
+
+
+class RestoreOperation:
+    """Visitor element for restoring the target Cluster."""
+
+    def accept(self, visitor: OperationVisitor, context: OperationContext) -> None:
+        visitor.visit_restore(self, context)
+
+
+class CleanupOperation:
+    """Visitor element for removing the recovery bootstrap."""
+
+    def accept(self, visitor: OperationVisitor, context: OperationContext) -> None:
+        visitor.visit_cleanup(self, context)
+
+
+class RecoveryOperationVisitor:
+    """Perform recovery actions for each operation element."""
+
+    def visit_prepare(
+        self, _operation: PrepareOperation, context: OperationContext
+    ) -> None:
         value = context.function_input
         cluster = context.cluster_client.get_cluster(value.namespace, value.target_name)
         plan = build_recovery_plan(value, cluster)
         context.cluster_client.prepare_recovery(context.postgresql, plan)
 
+    def visit_prepare_delete(
+        self, _operation: PrepareDeleteOperation, context: OperationContext
+    ) -> None:
+        self.visit_prepare(PrepareOperation(), context)
+        self.visit_delete(DeleteOperation(), context)
 
-class DeleteCommand:
-    """Delete the target CNPG Cluster and wait for it to disappear."""
-
-    def execute(self, context: OperationContext) -> None:
+    def visit_delete(
+        self, _operation: DeleteOperation, context: OperationContext
+    ) -> None:
         value = context.function_input
         context.cluster_client.delete_and_wait(value.namespace, value.target_name)
 
-
-class PrepareDeleteCommand:
-    """Persist a recovery plan, then delete the target CNPG Cluster."""
-
-    def execute(self, context: OperationContext) -> None:
-        PrepareCommand().execute(context)
-        DeleteCommand().execute(context)
-
-
-class RestoreCommand:
-    """Create the restored Cluster from a required recovery-plan ConfigMap."""
-
-    def execute(self, context: OperationContext) -> None:
+    def visit_restore(
+        self, _operation: RestoreOperation, context: OperationContext
+    ) -> None:
         plans = request.get_required_resources(context.request, "recovery-plan")
         if len(plans) != 1:
             raise RequiredResourceNotResolved(
@@ -80,27 +135,26 @@ class RestoreCommand:
             raise InvalidOperationInput(str(exc)) from exc
         context.cluster_client.create_restored_cluster(cluster)
 
-
-class CleanupCommand:
-    """Remove only spec.bootstrap.recovery from the target Cluster."""
-
-    def execute(self, context: OperationContext) -> None:
+    def visit_cleanup(
+        self, _operation: CleanupOperation, context: OperationContext
+    ) -> None:
         value = context.function_input
         context.cluster_client.remove_recovery(value.namespace, value.target_name)
 
 
 class OperationDispatcher:
-    """Select and execute the command registered for a recovery mode."""
+    """Look up an operation and pass it to the recovery visitor."""
 
-    def __init__(self) -> None:
-        self._commands: dict[str, RecoveryCommand] = {
-            "prepare": PrepareCommand(),
-            "prepare-delete": PrepareDeleteCommand(),
-            "delete": DeleteCommand(),
-            "restore": RestoreCommand(),
-            "cleanup": CleanupCommand(),
+    def __init__(self, visitor: OperationVisitor | None = None) -> None:
+        self._operations: dict[str, RecoveryOperation] = {
+            "prepare": PrepareOperation(),
+            "prepare-delete": PrepareDeleteOperation(),
+            "delete": DeleteOperation(),
+            "restore": RestoreOperation(),
+            "cleanup": CleanupOperation(),
         }
+        self._visitor = visitor or RecoveryOperationVisitor()
 
     def execute(self, context: OperationContext) -> None:
-        """Execute the command corresponding to the validated input mode."""
-        self._commands[context.function_input.mode].execute(context)
+        """Visit the operation corresponding to the validated input mode."""
+        self._operations[context.function_input.mode].accept(self._visitor, context)
