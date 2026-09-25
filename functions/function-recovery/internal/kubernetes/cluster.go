@@ -84,7 +84,7 @@ func (c *ClusterClient) CreateRestoredCluster(ctx context.Context, cluster *unst
 	}
 	clusters := c.client.Resource(clusterGVR).Namespace(cluster.GetNamespace())
 	if _, err := clusters.Create(ctx, cluster, metav1.CreateOptions{}); err == nil {
-		return nil
+		return c.waitForReady(ctx, clusters, cluster.GetName())
 	} else if !apierrors.IsAlreadyExists(err) {
 		return err
 	}
@@ -103,7 +103,27 @@ func (c *ClusterClient) CreateRestoredCluster(ctx context.Context, cluster *unst
 	if !currentFound || !desiredFound || !apiequality.Semantic.DeepEqual(currentRecovery, desiredRecovery) {
 		return fmt.Errorf("CNPG Cluster %s/%s already exists without the requested recovery bootstrap", cluster.GetNamespace(), cluster.GetName())
 	}
-	return nil
+	return c.waitForReady(ctx, clusters, cluster.GetName())
+}
+
+func (c *ClusterClient) waitForReady(ctx context.Context, clusters dynamic.ResourceInterface, name string) error {
+	return wait.PollUntilContextTimeout(ctx, c.interval, c.timeout, true, func(ctx context.Context) (bool, error) {
+		cluster, err := clusters.Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		conditions, found, err := unstructured.NestedSlice(cluster.Object, "status", "conditions")
+		if err != nil || !found {
+			return false, err
+		}
+		for _, value := range conditions {
+			condition, ok := value.(map[string]interface{})
+			if ok && condition["type"] == "Ready" && condition["status"] == "True" {
+				return true, nil
+			}
+		}
+		return false, nil
+	})
 }
 
 func (c *ClusterClient) PrepareAndDelete(ctx context.Context, postgresqlNamespace, postgresqlName, clusterNamespace, clusterName string, plan *unstructured.Unstructured) error {

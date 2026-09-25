@@ -51,6 +51,7 @@ func TestCreateRestoredClusterCreatesMissingCluster(t *testing.T) {
 		"kind":       "Cluster",
 		"metadata":   map[string]interface{}{"name": "orders-primary", "namespace": "platform"},
 		"spec":       map[string]interface{}{"instances": int64(1)},
+		"status":     map[string]interface{}{"conditions": []interface{}{map[string]interface{}{"type": "Ready", "status": "True"}}},
 	}}
 	client := fake.NewSimpleDynamicClient(runtime.NewScheme())
 	clusterClient := &ClusterClient{client: client}
@@ -66,6 +67,22 @@ func TestCreateRestoredClusterCreatesMissingCluster(t *testing.T) {
 	}
 }
 
+func TestCreateRestoredClusterWaitsForReady(t *testing.T) {
+	cluster := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "postgresql.cnpg.io/v1",
+		"kind":       "Cluster",
+		"metadata":   map[string]interface{}{"name": "orders-primary", "namespace": "platform"},
+		"status":     map[string]interface{}{"conditions": []interface{}{map[string]interface{}{"type": "Ready", "status": "False"}}},
+	}}
+	client := fake.NewSimpleDynamicClient(runtime.NewScheme())
+	clusterClient := &ClusterClient{client: client, interval: time.Millisecond, timeout: time.Second}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	if err := clusterClient.CreateRestoredCluster(ctx, cluster); err == nil {
+		t.Fatal("expected restoring a Cluster without Ready=True to time out")
+	}
+}
+
 func TestCreateRestoredClusterAcceptsMatchingRetry(t *testing.T) {
 	cluster := &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "postgresql.cnpg.io/v1",
@@ -74,6 +91,7 @@ func TestCreateRestoredClusterAcceptsMatchingRetry(t *testing.T) {
 		"spec": map[string]interface{}{"bootstrap": map[string]interface{}{
 			"recovery": map[string]interface{}{"backup": map[string]interface{}{"name": "orders-backup"}},
 		}},
+		"status": map[string]interface{}{"conditions": []interface{}{map[string]interface{}{"type": "Ready", "status": "True"}}},
 	}}
 	client := fake.NewSimpleDynamicClient(runtime.NewScheme(), cluster.DeepCopy())
 	clusterClient := &ClusterClient{client: client}
@@ -82,6 +100,25 @@ func TestCreateRestoredClusterAcceptsMatchingRetry(t *testing.T) {
 	}
 	if _, err := client.Resource(clusterGVR).Namespace("platform").Get(context.Background(), "orders-primary", metav1.GetOptions{}); err != nil {
 		t.Fatalf("expected restored Cluster to remain present: %v", err)
+	}
+}
+
+func TestWaitForReadyRequiresReadyTrueCondition(t *testing.T) {
+	clusters := fake.NewSimpleDynamicClient(runtime.NewScheme()).Resource(clusterGVR).Namespace("platform")
+	client := &ClusterClient{interval: time.Millisecond, timeout: time.Second}
+	notReady := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "postgresql.cnpg.io/v1",
+		"kind":       "Cluster",
+		"metadata":   map[string]interface{}{"name": "orders-primary", "namespace": "platform"},
+		"status":     map[string]interface{}{"conditions": []interface{}{map[string]interface{}{"type": "Ready", "status": "False"}}},
+	}}
+	if _, err := clusters.Create(context.Background(), notReady, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("failed to create test Cluster: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	if err := client.waitForReady(ctx, clusters, "orders-primary"); err == nil {
+		t.Fatal("expected a Cluster without Ready=True to time out")
 	}
 }
 

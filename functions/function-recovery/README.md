@@ -19,9 +19,9 @@ Prepare reads the referenced Cluster, pauses its Database XR, and synchronously
 persists the recovery plan ConfigMap before returning success. Delete uses the
 runtime service account to delete the native CNPG Cluster, then waits until it
 is absent. Restore creates the recovered Cluster through the function runtime's
-Kubernetes client. A retry succeeds when the existing Cluster already has the
-requested recovery bootstrap; it rejects a conflicting Cluster without
-overwriting it. Cleanup uses the same client to remove only
+Kubernetes client and waits for its CNPG `Ready=True` condition. A retry
+succeeds when the existing Cluster already has the requested recovery bootstrap;
+it rejects a conflicting Cluster without overwriting it. Cleanup uses the same client to remove only
 `spec.bootstrap.recovery` from the restored Cluster. Both entrypoints delegate
 to the same CLI implementation.
 
