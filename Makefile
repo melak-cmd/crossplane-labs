@@ -48,7 +48,7 @@ install-crossplane: ## Install Crossplane
 
 install-deps: ## Install APIs, operations, and functions from source
 	kubectl create namespace platform --dry-run=client -o yaml | kubectl apply -f -
-	kubectl apply -R -f apis/
+	kubectl apply -R -f configuration.yaml
 	kubectl apply -f operations/
 	kubectl apply -f functions/
 

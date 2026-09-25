@@ -1,7 +1,7 @@
 apiVersion: dev.crossplane.io/v1alpha1
 kind: Project
 metadata:
-  name: kaonix-platform
+  name: platform
 spec:
   crossplane:
     version: '>=v2.3.0'
@@ -26,13 +26,13 @@ spec:
   #     package: xpkg.crossplane.io/crossplane-contrib/function-auto-ready
   #     version: '>=v0.6.9'
   description: |
-    Kaonix platform configuration with app, network, and database compositions.
+    Platform configuration with app, network, and database compositions.
   license: Apache-2.0
-  maintainer: Kaonix
+  maintainer: melak-cmd
   readme: |
     Featuring Compositions for:
     - Apps (Deployment, HPA)
     - Networks (NetworkPolicy, Service, Ingress, DNS)
     - Databases (CloudNativePG Cluster, Secret)
-  repository: registry.localhost:5000/kaonix-platform
+  repository: registry.localhost:5000/platform
   source: github.com/melak-cmd/crossplane-labs

@@ -18,14 +18,14 @@ kind: Function
 metadata:
   name: function-pause
 spec:
-  package: registry.localhost:5000/function-pause:v0.1.9
+  package: registry.localhost:5000/function-pause:v0.1.13
 ---
 apiVersion: pkg.crossplane.io/v1
 kind: Function
 metadata:
   name: function-recovery
 spec:
-  package: registry.localhost:5000/function-recovery:v0.1.9
+  package: registry.localhost:5000/function-recovery:v0.1.13
   runtimeConfigRef:
     apiVersion: pkg.crossplane.io/v1beta1
     kind: DeploymentRuntimeConfig

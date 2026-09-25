@@ -1,0 +1,11 @@
+apiVersion: pkg.crossplane.io/v1
+kind: Configuration
+metadata:
+  name: platform
+spec:
+  ignoreCrossplaneConstraints: false
+  package: registry.localhost:5000/platform:v0.1.13
+  packagePullPolicy: IfNotPresent
+  revisionActivationPolicy: Automatic
+  revisionHistoryLimit: 0
+  skipDependencyResolution: true
