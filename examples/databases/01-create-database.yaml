@@ -7,7 +7,7 @@ spec:
   id: madmax
   parameters:
     namespace: platform
-    database: devops-toolkit
+    database: db
     version: "16"
     size: small
     instances: 1
