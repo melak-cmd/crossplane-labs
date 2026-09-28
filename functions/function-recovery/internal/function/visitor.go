@@ -2,17 +2,18 @@ package function
 
 import (
 	"context"
+	"fmt"
 
 	fnv1 "github.com/crossplane/function-sdk-go/proto/v1"
 	"github.com/melak-cmd/crossplane-labs/functions/function-recovery/internal/model"
 	"github.com/melak-cmd/crossplane-labs/functions/function-recovery/internal/operations"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type operationVisitor struct {
 	ctx           context.Context
 	handler       *Handler
-	req           *fnv1.RunFunctionRequest
 	rsp           *fnv1.RunFunctionResponse
 	input         *model.Input
 	postgresql    *unstructured.Unstructured
@@ -34,13 +35,21 @@ func (v operationVisitor) VisitPrepare(operations.Prepare) error {
 }
 
 func (v operationVisitor) VisitRestore(op operations.Restore) error {
-	plan, resolved, err := ReadRequiredResource(v.req, op.RequiredResourceName())
+	planName := v.input.Spec.PlanName
+	plan, err := v.handler.clusterClient.GetRecoveryPlan(
+		v.ctx, v.input.Spec.Target.Namespace, planName,
+	)
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			InvalidOperation(
+				v.rsp,
+				v.statusSubject,
+				model.Operation(v.input.Spec.Mode),
+				fmt.Errorf("recovery plan ConfigMap %q was not found", planName),
+			)
+			return nil
+		}
 		FatalOperation(v.rsp, v.statusSubject, model.Operation(v.input.Spec.Mode), err, "cannot get recovery plan")
-		return nil
-	}
-	if !resolved {
-		InvalidOperation(v.rsp, v.statusSubject, model.Operation(v.input.Spec.Mode), errUnresolvedResource)
 		return nil
 	}
 	_, cluster, err := op.Run(v.input, plan)

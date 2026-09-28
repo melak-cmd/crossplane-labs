@@ -134,15 +134,14 @@ class TestFunctionRunner(unittest.IsolatedAsyncioTestCase):
         req.required_resources["postgresql"].items.add(
             resource=resource.dict_to_struct(postgresql)
         )
-        req.required_resources["recovery-plan"].items.add(
-            resource=resource.dict_to_struct({"data": {}})
-        )
         client = Mock()
+        client.get_recovery_plan.return_value = {"data": {}}
 
         rsp = await fn.FunctionRunner(client).RunFunction(req, None)
 
         self.assertEqual(fnv1.STATUS_CONDITION_FALSE, rsp.conditions[0].status)
         self.assertEqual("InvalidRecoveryInput", rsp.conditions[0].reason)
+        client.get_recovery_plan.assert_called_once_with("platform", "orders-plan")
         client.create_restored_cluster.assert_not_called()
 
 
@@ -162,7 +161,6 @@ class TestOperationDispatcher(unittest.TestCase):
                 target_name="orders-primary",
             ),
             postgresql={},
-            request=fnv1.RunFunctionRequest(),
             cluster_client=client,
         )
 
@@ -170,7 +168,7 @@ class TestOperationDispatcher(unittest.TestCase):
 
         self.assertEqual(
             ["get_cluster", "prepare_recovery", "delete_and_wait"],
-            [call.args[0] for call in client.method_calls],
+            [call[0] for call in client.method_calls],
         )
 
     def test_delete_and_cleanup_dispatch_to_their_commands(self) -> None:
@@ -187,7 +185,6 @@ class TestOperationDispatcher(unittest.TestCase):
                         target_name="orders-primary",
                     ),
                     postgresql={},
-                    request=fnv1.RunFunctionRequest(),
                     cluster_client=client,
                 )
 

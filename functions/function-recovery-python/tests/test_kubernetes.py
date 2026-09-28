@@ -7,6 +7,26 @@ from function.kubernetes import KubernetesClient
 
 
 class TestKubernetesClient(unittest.TestCase):
+    def test_get_recovery_plan_fetches_named_configmap(self) -> None:
+        configmaps = Mock()
+        configmaps.get.return_value.to_dict.return_value = {
+            "data": {"manifest.json": "{}"}
+        }
+        dynamic_client = Mock()
+        dynamic_client.resources.get.return_value = configmaps
+
+        plan = KubernetesClient(dynamic_client).get_recovery_plan(
+            "platform", "orders-plan"
+        )
+
+        self.assertEqual({"data": {"manifest.json": "{}"}}, plan)
+        dynamic_client.resources.get.assert_called_once_with(
+            api_version="v1", kind="ConfigMap"
+        )
+        configmaps.get.assert_called_once_with(
+            name="orders-plan", namespace="platform"
+        )
+
     def test_prepare_pauses_postgresql_before_creating_plan(self) -> None:
         postgresqls = Mock()
         configmaps = Mock()

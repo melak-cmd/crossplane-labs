@@ -10,7 +10,7 @@ import yaml
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COMPOSITION_DIR = os.path.join(ROOT, "apis")
-RBAC_PATH = os.path.join(ROOT, "operations", "rbac.yaml")
+RBAC_PATH = os.path.join(ROOT, "install", "function-recovery-rbac.yaml")
 COMPOSED_RESOURCE_RE = re.compile(
     r"(?m)^\s*apiVersion:\s*([A-Za-z0-9.-]+(?:/[A-Za-z0-9.]+)?)\s*\n"
     r"\s*kind:\s*([A-Za-z][A-Za-z0-9]*)\s*$"

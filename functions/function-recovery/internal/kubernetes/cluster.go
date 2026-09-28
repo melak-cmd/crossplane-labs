@@ -77,6 +77,14 @@ func (c *ClusterClient) GetCluster(ctx context.Context, namespace, name string) 
 	return c.client.Resource(clusterGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
+func (c *ClusterClient) GetRecoveryPlan(ctx context.Context, namespace, name string) (*unstructured.Unstructured, error) {
+	c.initialize()
+	if c.initErr != nil {
+		return nil, c.initErr
+	}
+	return c.client.Resource(configMapGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+}
+
 func (c *ClusterClient) CreateRestoredCluster(ctx context.Context, cluster *unstructured.Unstructured) error {
 	c.initialize()
 	if c.initErr != nil {

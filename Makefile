@@ -1,6 +1,6 @@
 CLUSTER_NAME ?= crossplane-labs
 PKG_NAME ?= kaonix-platform
-TAG ?= v0.1.24
+TAG ?= v0.1.25
 
 FUNCTION_NAME ?= function-recovery
 FUNCTION_IMAGE ?= registry.localhost:5000/$(FUNCTION_NAME)
@@ -48,9 +48,7 @@ install-crossplane: ## Install Crossplane
 
 install-deps: ## Install APIs, operations, and functions from source
 	kubectl create namespace platform --dry-run=client -o yaml | kubectl apply -f -
-	kubectl apply -R -f configuration.yaml
-	kubectl apply -f operations/
-	kubectl apply -f functions/
+	kubectl apply -R -f install/
 
 delete: ## Delete application and database XRs
 	kubectl delete -f examples/ --recursive --ignore-not-found
@@ -81,19 +79,19 @@ render-app: ## Render App composition locally (requires Docker)
 
 render-db: ## Render Database composition locally (requires Docker)
 	crossplane composition render examples/databases/01-create-database.yaml apis/databases/composition.yaml \
-		functions/functions.yaml -x
+		install/functions.yaml -x
 
 render-db-backup: ## Render backup-enabled Database composition locally (requires Docker)
 	crossplane composition render examples/databases/01-create-database.yaml apis/databases/composition.yaml \
-		functions/functions.yaml -x
+		install/functions.yaml -x
 
 render-backup: ## Render DatabaseBackup composition locally (requires Docker)
 	crossplane composition render examples/databases/02-create-databasebackup.yaml apis/databases/backup-composition.yaml \
-		functions/functions.yaml -x
+		install/functions.yaml -x
 
 render-network: ## Render Network composition locally (requires Docker)
 	crossplane composition render examples/networks/network.yaml apis/networks/composition.yaml \
-		functions/functions.yaml -x
+		install/functions.yaml -x
 
 validate-app: ## Render and validate App composition (requires Docker)
 	crossplane composition render examples/apps/app.yaml apis/apps/composition.yaml -x | \
@@ -101,22 +99,22 @@ validate-app: ## Render and validate App composition (requires Docker)
 
 validate-db: ## Render and validate Database composition (requires Docker)
 	crossplane composition render examples/databases/01-create-database.yaml apis/databases/composition.yaml \
-		functions/functions.yaml -x | \
+		install/functions.yaml -x | \
 		crossplane resource validate apis/ -
 
 validate-db-backup: ## Render and validate backup-enabled Database composition (requires Docker)
 	crossplane composition render examples/databases/01-create-database.yaml apis/databases/composition.yaml \
-		functions/functions.yaml -x | \
+		install/functions.yaml -x | \
 		crossplane resource validate apis/ -
 
 validate-backup: ## Render and validate DatabaseBackup composition (requires Docker)
 	crossplane composition render examples/databases/02-create-databasebackup.yaml apis/databases/backup-composition.yaml \
-		functions/functions.yaml -x | \
+		install/functions.yaml -x | \
 		crossplane resource validate apis/ -
 
 validate-network: ## Render and validate Network composition (requires Docker)
 	crossplane composition render examples/networks/network.yaml apis/networks/composition.yaml \
-		functions/functions.yaml -x | \
+		install/functions.yaml -x | \
 		crossplane resource validate apis/ -
 
 validate-rbac: ## Validate the composition read contract (downstream resources vs provider RBAC, no Docker)

@@ -9,8 +9,6 @@ import (
 
 type Restore struct{}
 
-func (Restore) RequiredResourceName() string { return "recovery-plan" }
-
 func (Restore) Run(in *model.Input, observed *unstructured.Unstructured) (resource.Name, *unstructured.Unstructured, error) {
 	cluster, err := cnpg.RestoreCluster(in, observed)
 	return resource.Name(in.Spec.Target.Name), cluster, err

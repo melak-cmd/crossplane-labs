@@ -50,11 +50,6 @@ spec:
         kind: PostgreSQL
         name: madmax
         namespace: platform
-      - requirementName: recovery-plan
-        apiVersion: v1
-        kind: ConfigMap
-        name: madmax-recovery-plan
-        namespace: platform
     input:
       apiVersion: function-recovery.fn.kaonix.com/v1beta1
       kind: Input

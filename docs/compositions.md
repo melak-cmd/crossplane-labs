@@ -21,7 +21,9 @@ status fields to populate XR status. A manual backup is ready when CNPG reports
 
 Crossplane's service account needs access to every CRD it composes. The
 aggregated `crossplane-compose-cnpg-resources` ClusterRole in
-`operations/rbac.yaml` grants `get`, `list`, `watch`, `create`, `update`,
+(relative to the repository root) grants `get`, `list`, `watch`, `create`, `update`,
+`install/function-recovery-rbac.yaml` grants `get`, `list`, `watch`, `create`, `update`,
+(relative to the repository root) grants `get`, `list`, `watch`, `create`, `update`,
 `patch`, and `delete` on `postgresql.cnpg.io/clusters`,
 `postgresql.cnpg.io/scheduledbackups`, and `postgresql.cnpg.io/backups`. Its
 `rbac.crossplane.io/aggregate-to-crossplane: "true"` label aggregates these

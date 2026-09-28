@@ -17,6 +17,7 @@ type Handler struct {
 	log           logging.Logger
 	clusterClient interface {
 		operations.ClusterReader
+		operations.RecoveryPlanReader
 		operations.ClusterRestorer
 		operations.ClusterDeleter
 		operations.RecoveryCleaner
@@ -27,6 +28,7 @@ type Handler struct {
 
 func New(log logging.Logger, clusterClient interface {
 	operations.ClusterReader
+	operations.RecoveryPlanReader
 	operations.ClusterRestorer
 	operations.ClusterDeleter
 	operations.RecoveryCleaner
@@ -72,7 +74,7 @@ func (h *Handler) RunFunction(ctx context.Context, req *fnv1.RunFunctionRequest)
 		h.log.Info("Running recovery operation", "mode", in.Spec.Mode, "postgresql", database.GetName(), "cluster", clusterName)
 	}
 	visitor := operationVisitor{
-		ctx: ctx, handler: h, req: req, rsp: rsp, input: in,
+		ctx: ctx, handler: h, rsp: rsp, input: in,
 		postgresql: database, statusSubject: statusSubject,
 	}
 	if err := op.Accept(visitor); err != nil {

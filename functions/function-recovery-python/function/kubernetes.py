@@ -44,6 +44,14 @@ class KubernetesClient:
             .to_dict()
         )
 
+    def get_recovery_plan(self, namespace: str, name: str) -> dict[str, Any]:
+        """Fetch a saved recovery-plan ConfigMap as a dictionary."""
+        return (
+            self._resource("v1", "ConfigMap")
+            .get(name=name, namespace=namespace)
+            .to_dict()
+        )
+
     def prepare_recovery(
         self, postgresql: dict[str, Any], plan: dict[str, Any]
     ) -> None:

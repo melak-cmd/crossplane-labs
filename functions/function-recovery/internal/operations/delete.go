@@ -17,6 +17,10 @@ type ClusterReader interface {
 	GetCluster(context.Context, string, string) (*unstructured.Unstructured, error)
 }
 
+type RecoveryPlanReader interface {
+	GetRecoveryPlan(context.Context, string, string) (*unstructured.Unstructured, error)
+}
+
 type ClusterRestorer interface {
 	CreateRestoredCluster(context.Context, *unstructured.Unstructured) error
 }

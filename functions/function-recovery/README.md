@@ -76,6 +76,8 @@ with the Cluster target and `planName` to perform the sequence in one step.
 Each function step must provide the PostgreSQL XR as the required resource
 `postgresql`. The function reads its `spec.crossplane.resourceRefs` to resolve
 the CNPG `Cluster` name; `target.namespace` remains an explicit input.
+Restore reads the recovery-plan ConfigMap named by `planName` directly using
+the function's Kubernetes client and `target.namespace`.
 
 See `examples/databases/03-prepare-recovery.yaml`,
 `examples/databases/04-restore-from-backup.yaml`, and

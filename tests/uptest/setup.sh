@@ -29,7 +29,7 @@ echo "==> Installing XRDs and Compositions..."
 ${KUBECTL} apply -R -f "${ROOT_DIR}/apis/"
 
 echo "==> Installing Functions..."
-${KUBECTL} apply -f "${ROOT_DIR}/functions/"
+${KUBECTL} apply -f "${ROOT_DIR}/install/functions.yaml"
 
 echo "==> Waiting for all crossplane-system pods to be ready..."
 ${KUBECTL} wait --for=condition=Ready pods --all \

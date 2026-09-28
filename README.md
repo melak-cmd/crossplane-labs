@@ -51,6 +51,9 @@ make restart-cnpg   # delete cnpg operator pods; re-enables the volumeSnapshot b
 ```
 
 `install-deps` applies the source manifests directly (`apis/`, `operations/`, and `functions/`). Database `Cluster`, `ScheduledBackup`, and `Backup` resources are native composed CRDs managed by Crossplane; no Crossplane providers are required.
+`install-deps` applies the deployment manifests in `install/`. Database
+`Cluster`, `ScheduledBackup`, and `Backup` resources are native composed CRDs
+managed by Crossplane; no Crossplane providers are required.
 
 On existing clusters, applying these manifests does not uninstall a Provider
 that was installed previously. Hand off databases still managed by
@@ -142,7 +145,8 @@ spec:
 Backups use the CloudNativePG **volume snapshot** method (no object store or
 credentials required). All CNPG resources are native composed CRDs managed by
 Crossplane. The aggregated `crossplane-compose-cnpg-resources` ClusterRole in
-`operations/rbac.yaml` grants Crossplane access; provider-kubernetes and its
+The aggregated `crossplane-compose-cnpg-resources` ClusterRole in
+`install/function-recovery-rbac.yaml` grants Crossplane access; provider-kubernetes and its
 ProviderConfig are not installed.
 
 ```yaml
@@ -242,12 +246,12 @@ cluster identity. To recover a database from a volume-snapshot backup:
 ```text
 crossplane-labs/
 ├── crossplane-project.yaml # Project definition (replaces crossplane.yaml)
+├── install/                # Configuration, Functions, and runtime RBAC manifests
 ├── apis/
 │   ├── apps/               # App XRD (definition.yaml) + Composition (composition.yaml)
 │   ├── databases/          # Database + DatabaseBackup XRDs + Compositions
 │   └── networks/           # Network XRD (definition.yaml) + Composition (composition.yaml)
 ├── functions/
-│   ├── functions.yaml      # go-templating, auto-ready, patch-and-transform, function-scale
 │   └── function-scale/     # custom Go function (scale composed Deployments)
 ├── clusters/
 │   └── k3d.yaml            # k3d cluster config
@@ -298,7 +302,7 @@ Or directly:
 
 ```bash
 crossplane render examples/apps/app.yaml apis/apps/composition.yaml \
-  functions/functions.yaml -x
+  install/functions.yaml -x
 ```
 
 ## Custom Functions
@@ -357,7 +361,7 @@ crossplane render example/xr.yaml example/composition.yaml example/functions.yam
 make function-push                  # build + push image and xpkg to registry.localhost:5000
 ```
 
-The `Function` object for `function-scale` lives in `functions/functions.yaml`
+The `Function` object for `function-scale` lives in `install/functions.yaml`
 (also applied by `install-deps`), so once the package is in the local registry
 it is picked up automatically.
 

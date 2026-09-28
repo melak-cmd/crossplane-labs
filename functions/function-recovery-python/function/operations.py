@@ -5,8 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from crossplane.function import request
-from crossplane.function.proto.v1 import run_function_pb2 as fnv1
+from kubernetes.client.exceptions import ApiException
 
 from function.kubernetes import KubernetesClient
 from function.recovery import (
@@ -18,7 +17,7 @@ from function.recovery import (
 
 
 class RequiredResourceNotResolved(Exception):
-    """A required resource has not been resolved by Crossplane."""
+    """A required recovery-plan ConfigMap was not found."""
 
 
 class InvalidOperationInput(Exception):
@@ -31,7 +30,6 @@ class OperationContext:
 
     function_input: RecoveryInput
     postgresql: dict[str, Any]
-    request: fnv1.RunFunctionRequest
     cluster_client: KubernetesClient
 
 
@@ -124,13 +122,21 @@ class RecoveryOperationVisitor:
     def visit_restore(
         self, _operation: RestoreOperation, context: OperationContext
     ) -> None:
-        plans = request.get_required_resources(context.request, "recovery-plan")
-        if len(plans) != 1:
-            raise RequiredResourceNotResolved(
-                "required recovery resource is not resolved"
-            )
+        value = context.function_input
+        if not value.plan_name:
+            raise InvalidOperationInput("planName is required")
         try:
-            cluster = build_restored_cluster(context.function_input, plans[0])
+            plan = context.cluster_client.get_recovery_plan(
+                value.namespace, value.plan_name
+            )
+        except ApiException as exc:
+            if exc.status == 404:
+                raise RequiredResourceNotResolved(
+                    "required recovery plan ConfigMap is not found"
+                ) from exc
+            raise
+        try:
+            cluster = build_restored_cluster(value, plan)
         except InputError as exc:
             raise InvalidOperationInput(str(exc)) from exc
         context.cluster_client.create_restored_cluster(cluster)

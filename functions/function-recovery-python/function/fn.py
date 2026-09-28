@@ -107,7 +107,7 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         try:
             await asyncio.to_thread(
                 self.operation_dispatcher.execute,
-                OperationContext(function_input, postgresql, req, self.cluster_client),
+                OperationContext(function_input, postgresql, self.cluster_client),
             )
         except RequiredResourceNotResolved as exc:
             message = str(exc)

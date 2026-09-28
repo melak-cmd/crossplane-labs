@@ -45,6 +45,25 @@ func TestGetClusterUsesReferencedName(t *testing.T) {
 	}
 }
 
+func TestGetRecoveryPlanUsesPlanNameAndNamespace(t *testing.T) {
+	plan := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "v1",
+		"kind":       "ConfigMap",
+		"metadata":   map[string]interface{}{"name": "orders-plan", "namespace": "platform"},
+		"data":       map[string]interface{}{"manifest.json": `{"kind":"Cluster"}`},
+	}}
+	client := fake.NewSimpleDynamicClient(runtime.NewScheme(), plan)
+	clusterClient := &ClusterClient{client: client}
+
+	got, err := clusterClient.GetRecoveryPlan(context.Background(), "platform", "orders-plan")
+	if err != nil {
+		t.Fatalf("GetRecoveryPlan returned an error: %v", err)
+	}
+	if got.GetName() != "orders-plan" || got.GetNamespace() != "platform" {
+		t.Fatalf("GetRecoveryPlan returned %s/%s, want platform/orders-plan", got.GetNamespace(), got.GetName())
+	}
+}
+
 func TestCreateRestoredClusterCreatesMissingCluster(t *testing.T) {
 	cluster := &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "postgresql.cnpg.io/v1",

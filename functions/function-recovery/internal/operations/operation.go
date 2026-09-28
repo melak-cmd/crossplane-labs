@@ -7,7 +7,6 @@ import (
 )
 
 type Operation interface {
-	RequiredResourceName() string
 	Run(*model.Input, *unstructured.Unstructured) (resource.Name, *unstructured.Unstructured, error)
 }
 
