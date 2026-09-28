@@ -64,6 +64,72 @@ func TestGetRecoveryPlanUsesPlanNameAndNamespace(t *testing.T) {
 	}
 }
 
+func TestGetPostgreSQLUsesNameAndNamespace(t *testing.T) {
+	database := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "database.kaonix.inc.fr/v1alpha1",
+		"kind":       "PostgreSQL",
+		"metadata":   map[string]interface{}{"name": "orders", "namespace": "platform"},
+	}}
+	client := fake.NewSimpleDynamicClient(runtime.NewScheme(), database)
+	clusterClient := &ClusterClient{client: client}
+
+	got, err := clusterClient.GetPostgreSQL(context.Background(), "platform", "orders")
+	if err != nil {
+		t.Fatalf("GetPostgreSQL returned an error: %v", err)
+	}
+	if got.GetName() != "orders" || got.GetNamespace() != "platform" {
+		t.Fatalf("GetPostgreSQL returned %s/%s, want platform/orders", got.GetNamespace(), got.GetName())
+	}
+}
+
+func TestResumePostgreSQLClearsPausedState(t *testing.T) {
+	database := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "database.kaonix.inc.fr/v1alpha1",
+		"kind":       "PostgreSQL",
+		"metadata": map[string]interface{}{
+			"name": "orders", "namespace": "platform",
+			"annotations": map[string]interface{}{"crossplane.io/paused": "true"},
+		},
+	}}
+	client := fake.NewSimpleDynamicClient(runtime.NewScheme(), database)
+	clusterClient := &ClusterClient{client: client}
+
+	if err := clusterClient.ResumePostgreSQL(context.Background(), "platform", "orders"); err != nil {
+		t.Fatalf("ResumePostgreSQL returned an error: %v", err)
+	}
+	updated, err := client.Resource(postgresqlGVR).Namespace("platform").Get(context.Background(), "orders", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("failed to read PostgreSQL XR after resume: %v", err)
+	}
+	if got := updated.GetAnnotations()["crossplane.io/paused"]; got != "false" {
+		t.Fatalf("expected paused annotation to be false, got %q", got)
+	}
+}
+
+func TestAcknowledgeRestoreRequestRemovesTriggerLabel(t *testing.T) {
+	request := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "database.kaonix.inc.fr/v1alpha1",
+		"kind":       "DatabaseRestore",
+		"metadata": map[string]interface{}{
+			"name":   "orders",
+			"labels": map[string]interface{}{restoreRequestTriggerLabel: "requested"},
+		},
+	}}
+	client := fake.NewSimpleDynamicClient(runtime.NewScheme(), request)
+	clusterClient := &ClusterClient{client: client}
+
+	if err := clusterClient.AcknowledgeRestoreRequest(context.Background(), "orders"); err != nil {
+		t.Fatalf("AcknowledgeRestoreRequest returned an error: %v", err)
+	}
+	updated, err := client.Resource(databaseRestoreGVR).Get(context.Background(), "orders", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("failed to read DatabaseRestore after acknowledgement: %v", err)
+	}
+	if _, found := updated.GetLabels()[restoreRequestTriggerLabel]; found {
+		t.Fatal("expected the restore trigger label to be removed")
+	}
+}
+
 func TestCreateRestoredClusterCreatesMissingCluster(t *testing.T) {
 	cluster := &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "postgresql.cnpg.io/v1",

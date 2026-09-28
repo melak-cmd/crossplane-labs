@@ -50,10 +50,11 @@ If the CloudNativePG operator was already running when `install-csi` added the s
 make restart-cnpg   # delete cnpg operator pods; re-enables the volumeSnapshot backup method
 ```
 
-`install-deps` applies the source manifests directly (`apis/`, `operations/`, and `functions/`). Database `Cluster`, `ScheduledBackup`, and `Backup` resources are native composed CRDs managed by Crossplane; no Crossplane providers are required.
-`install-deps` applies the deployment manifests in `install/`. Database
-`Cluster`, `ScheduledBackup`, and `Backup` resources are native composed CRDs
-managed by Crossplane; no Crossplane providers are required.
+`install-deps` applies XRDs and Compositions from `apis/`, the WatchOperation
+from `operations/`, plus Function and RBAC deployment manifests from `install/`.
+Database `Cluster`,
+`ScheduledBackup`, and `Backup` resources are native composed CRDs managed by
+Crossplane; no Crossplane providers are required.
 
 On existing clusters, applying these manifests does not uninstall a Provider
 that was installed previously. Hand off databases still managed by
@@ -241,6 +242,31 @@ cluster identity. To recover a database from a volume-snapshot backup:
 3. Point the application at the restored cluster's service
    (`<name>-rw.<namespace>.svc`) and verify the data.
 
+To trigger a restore Operation, apply a labeled `DatabaseRestore` request:
+
+```yaml
+apiVersion: database.kaonix.inc.fr/v1alpha1
+kind: DatabaseRestore
+metadata:
+  name: my-db                 # name of the PostgreSQL XR in target.namespace
+  labels:
+    recovery.kaonix.inc.fr/trigger: requested
+spec:
+  backupName: my-db-backup    # CNPG Backup in target.namespace
+  target:
+    namespace: platform
+```
+
+`DatabaseRestore` is cluster-scoped because Crossplane Operations are
+cluster-scoped. The `WatchOperation` matches the trigger label and runs the
+prepare, delete, restore, cleanup, and resume stages against the PostgreSQL XR
+and resources in `spec.target.namespace`. It reads the recovery plan named
+`<metadata.name>-recovery-plan`; the plan must already exist and the target CNPG
+Cluster must be absent. The function removes the trigger label when it starts,
+so later status changes do not launch another restore. A failed restore is
+one-shot; create a new request to retry it, and delete completed requests before
+restoring the same database again.
+
 ## Project Layout
 
 ```text
@@ -249,7 +275,7 @@ crossplane-labs/
 ├── install/                # Configuration, Functions, and runtime RBAC manifests
 ├── apis/
 │   ├── apps/               # App XRD (definition.yaml) + Composition (composition.yaml)
-│   ├── databases/          # Database + DatabaseBackup XRDs + Compositions
+│   ├── databases/          # PostgreSQL and DatabaseBackup XRDs + Compositions; DatabaseRestore XRD
 │   └── networks/           # Network XRD (definition.yaml) + Composition (composition.yaml)
 ├── functions/
 │   └── function-scale/     # custom Go function (scale composed Deployments)
@@ -257,9 +283,9 @@ crossplane-labs/
 │   └── k3d.yaml            # k3d cluster config
 ├── examples/
 │   ├── apps/               # sample App XR
-│   ├── databases/          # sample Database XR + backup examples
+│   ├── databases/          # sample Database XR, backup, and restore requests
 │   └── networks/           # sample Network XR
-├── operations/             # placeholder for Operations manifests
+├── operations/             # WatchOperation manifests
 ├── tests/
 │   └── uptest/
 │       ├── setup.sh        # e2e setup (installs CRDs and CNPG)

@@ -14,17 +14,18 @@ type Input struct {
 }
 
 type InputSpec struct {
-	// +kubebuilder:validation:Enum=prepare;delete;restore;cleanup;prepare-delete
-	Mode     string           `json:"mode"`
-	Target   ClusterReference `json:"target"`
-	PlanName string           `json:"planName,omitempty"`
-	Backup   *BackupReference `json:"backup,omitempty"`
+	// +kubebuilder:validation:Enum=prepare;delete;restore;cleanup;prepare-delete;resume
+	Mode           string           `json:"mode"`
+	Target         ClusterReference `json:"target"`
+	PlanName       string           `json:"planName,omitempty"`
+	Backup         *BackupReference `json:"backup,omitempty"`
+	WatchedRequest bool             `json:"watchedRequest,omitempty"`
 }
 
 type ClusterReference struct {
 	Name string `json:"-"`
 	// +kubebuilder:validation:MinLength=1
-	Namespace string `json:"namespace"`
+	Namespace string `json:"namespace,omitempty"`
 }
 
 type BackupReference struct {

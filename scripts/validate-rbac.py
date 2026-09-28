@@ -27,7 +27,9 @@ KIND_TO_RESOURCE = {
     "Backup": ("postgresql.cnpg.io", "backups"),
 }
 REQUIRED_VERBS = {"get", "list", "watch", "create", "update", "patch", "delete"}
+WATCHED_VERBS = {"get", "list", "watch"}
 AGGREGATION_LABEL = "rbac.crossplane.io/aggregate-to-crossplane"
+WATCHED_RESOURCES = {("database.kaonix.inc.fr", "databaserestores")}
 
 
 def composition_templates():
@@ -92,7 +94,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        resources = sorted(composed_resources())
+        resources = sorted(composed_resources() | WATCHED_RESOURCES)
         rules = aggregated_rules()
     except (OSError, yaml.YAMLError, ValueError) as error:
         print("validate-rbac: %s" % error, file=sys.stderr)
@@ -108,7 +110,7 @@ def main():
     missing = [
         (group, resource, verb)
         for group, resource in resources
-        for verb in sorted(REQUIRED_VERBS)
+        for verb in sorted(WATCHED_VERBS if (group, resource) in WATCHED_RESOURCES else REQUIRED_VERBS)
         if not any(rule_covers(rule, group, resource, verb) for rule in rules)
     ]
     if missing:
@@ -117,7 +119,7 @@ def main():
             print("  %s/%s %s" % (group or "core", resource, verb), file=sys.stderr)
         return 1
 
-    print("OK - Crossplane aggregated RBAC covers %d native resource types" % len(resources))
+    print("OK - Crossplane aggregated RBAC covers %d native and watched resource types" % len(resources))
     return 0
 
 

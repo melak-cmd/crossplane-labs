@@ -8,4 +8,5 @@ const (
 	OperationDelete        Operation = "delete"
 	OperationCleanup       Operation = "cleanup"
 	OperationPrepareDelete Operation = "prepare-delete"
+	OperationResume        Operation = "resume"
 )

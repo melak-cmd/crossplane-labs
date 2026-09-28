@@ -20,6 +20,7 @@ type Visitor interface {
 	VisitDelete(Delete) error
 	VisitCleanup(Cleanup) error
 	VisitPrepareDelete(PrepareDelete) error
+	VisitResume(Resume) error
 }
 
 func (Prepare) Accept(visitor Visitor) error { return visitor.VisitPrepare(Prepare{}) }
@@ -29,7 +30,9 @@ func (Cleanup) Accept(visitor Visitor) error { return visitor.VisitCleanup(Clean
 func (PrepareDelete) Accept(visitor Visitor) error {
 	return visitor.VisitPrepareDelete(PrepareDelete{})
 }
+func (Resume) Accept(visitor Visitor) error { return visitor.VisitResume(Resume{}) }
 
 type Delete struct{}
 type Cleanup struct{}
 type PrepareDelete struct{}
+type Resume struct{}

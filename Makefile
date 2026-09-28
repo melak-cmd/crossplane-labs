@@ -1,6 +1,6 @@
 CLUSTER_NAME ?= crossplane-labs
 PKG_NAME ?= kaonix-platform
-TAG ?= v0.1.25
+TAG ?= v0.1.29
 
 FUNCTION_NAME ?= function-recovery
 FUNCTION_IMAGE ?= registry.localhost:5000/$(FUNCTION_NAME)
@@ -48,7 +48,9 @@ install-crossplane: ## Install Crossplane
 
 install-deps: ## Install APIs, operations, and functions from source
 	kubectl create namespace platform --dry-run=client -o yaml | kubectl apply -f -
-	kubectl apply -R -f install/
+	kubectl apply -R -f apis/
+	kubectl wait --for=condition=Established crd/databaserestores.database.kaonix.inc.fr --timeout=120s
+	kubectl apply -R -f operations/ -f install/
 
 delete: ## Delete application and database XRs
 	kubectl delete -f examples/ --recursive --ignore-not-found

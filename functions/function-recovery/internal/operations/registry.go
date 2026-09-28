@@ -8,6 +8,7 @@ var registry = map[model.Operation]Element{
 	model.OperationDelete:        Delete{},
 	model.OperationCleanup:       Cleanup{},
 	model.OperationPrepareDelete: PrepareDelete{},
+	model.OperationResume:        Resume{},
 }
 
 func Lookup(operation model.Operation) (Element, bool) {

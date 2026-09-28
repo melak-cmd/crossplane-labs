@@ -1,0 +1,65 @@
+apiVersion: ops.crossplane.io/v1alpha1
+kind: WatchOperation
+metadata:
+  name: database-restore
+spec:
+  watch:
+    apiVersion: database.kaonix.inc.fr/v1alpha1
+    kind: DatabaseRestore
+    matchLabels:
+      recovery.kaonix.inc.fr/trigger: requested
+  concurrencyPolicy: Forbid
+  operationTemplate:
+    spec:
+      mode: Pipeline
+      pipeline:
+      - step: prepare-cluster
+        functionRef:
+          name: function-recovery
+        input:
+          apiVersion: function-recovery.fn.kaonix.com/v1beta1
+          kind: Input
+          spec:
+            mode: prepare
+            target: {}
+            watchedRequest: true
+      - step: delete-cluster
+        functionRef:
+          name: function-recovery
+        input:
+          apiVersion: function-recovery.fn.kaonix.com/v1beta1
+          kind: Input
+          spec:
+            mode: delete
+            target: {}
+            watchedRequest: true
+      - step: recover
+        functionRef:
+          name: function-recovery
+        input:
+          apiVersion: function-recovery.fn.kaonix.com/v1beta1
+          kind: Input
+          spec:
+            mode: restore
+            target: {}
+            watchedRequest: true
+      - step: cleanup-recovery-bootstrap
+        functionRef:
+          name: function-recovery
+        input:
+          apiVersion: function-recovery.fn.kaonix.com/v1beta1
+          kind: Input
+          spec:
+            mode: cleanup
+            target: {}
+            watchedRequest: true
+      - step: resume
+        functionRef:
+          name: function-recovery
+        input:
+          apiVersion: function-recovery.fn.kaonix.com/v1beta1
+          kind: Input
+          spec:
+            mode: resume
+            target: {}
+            watchedRequest: true

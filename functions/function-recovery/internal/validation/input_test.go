@@ -13,6 +13,7 @@ func TestInputAcceptsPrepareAndRestore(t *testing.T) {
 		{Spec: model.InputSpec{Mode: string(model.OperationRestore), PlanName: "plan", Target: model.ClusterReference{Name: "orders", Namespace: "platform"}, Backup: &model.BackupReference{Name: "backup", Namespace: "platform"}}},
 		{Spec: model.InputSpec{Mode: string(model.OperationDelete), Target: model.ClusterReference{Name: "orders", Namespace: "platform"}}},
 		{Spec: model.InputSpec{Mode: string(model.OperationCleanup), Target: model.ClusterReference{Name: "orders", Namespace: "platform"}}},
+		{Spec: model.InputSpec{Mode: string(model.OperationResume), Target: model.ClusterReference{Name: "orders", Namespace: "platform"}}},
 	}
 	for _, in := range inputs {
 		if err := Input(in); err != nil {

@@ -109,4 +109,15 @@ func (v operationVisitor) VisitPrepareDelete(operations.PrepareDelete) error {
 	return nil
 }
 
+func (v operationVisitor) VisitResume(operations.Resume) error {
+	if err := v.handler.clusterClient.ResumePostgreSQL(
+		v.ctx, v.input.Spec.Target.Namespace, v.postgresql.GetName(),
+	); err != nil {
+		FatalOperation(v.rsp, v.statusSubject, model.Operation(v.input.Spec.Mode), err, "cannot resume PostgreSQL XR")
+		return nil
+	}
+	SucceedOperation(v.rsp, v.statusSubject, model.Operation(v.input.Spec.Mode))
+	return nil
+}
+
 var _ operations.Visitor = operationVisitor{}

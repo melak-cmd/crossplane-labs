@@ -55,16 +55,17 @@ spec:
                 - restore
                 - cleanup
                 - prepare-delete
+                - resume
                 type: string
               planName:
                 type: string
+              watchedRequest:
+                type: boolean
               target:
                 properties:
                   namespace:
                     minLength: 1
                     type: string
-                required:
-                - namespace
                 type: object
             required:
             - mode
