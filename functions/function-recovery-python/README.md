@@ -45,3 +45,6 @@ with `kubectl apply -f install/functions.yaml` from the repository root.
 
 See [the Python Operation example](../../examples/databases/03-operation-recovery-python.yaml)
 for the matching pipeline inputs and required resources.
+
+See [the DatabaseRestore recovery guide](../../docs/database-restore-recovery-python.md)
+for the request-triggered workflow, file roles, and failure points.
