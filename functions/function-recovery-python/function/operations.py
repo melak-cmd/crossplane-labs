@@ -39,9 +39,6 @@ class OperationVisitor(Protocol):
     def visit_prepare(
         self, operation: PrepareOperation, context: OperationContext
     ) -> None: ...
-    def visit_prepare_delete(
-        self, operation: PrepareDeleteOperation, context: OperationContext
-    ) -> None: ...
     def visit_delete(
         self, operation: DeleteOperation, context: OperationContext
     ) -> None: ...
@@ -71,13 +68,6 @@ class PrepareOperation:
 
     def accept(self, visitor: OperationVisitor, context: OperationContext) -> None:
         visitor.visit_prepare(self, context)
-
-
-class PrepareDeleteOperation:
-    """Visitor element for preparing recovery and deleting the Cluster."""
-
-    def accept(self, visitor: OperationVisitor, context: OperationContext) -> None:
-        visitor.visit_prepare_delete(self, context)
 
 
 class DeleteOperation:
@@ -119,12 +109,6 @@ class RecoveryOperationVisitor:
         cluster = context.cluster_client.get_cluster(value.namespace, value.target_name)
         plan = build_recovery_plan(value, cluster)
         context.cluster_client.prepare_recovery(context.postgresql, plan)
-
-    def visit_prepare_delete(
-        self, _operation: PrepareDeleteOperation, context: OperationContext
-    ) -> None:
-        self.visit_prepare(PrepareOperation(), context)
-        self.visit_delete(DeleteOperation(), context)
 
     def visit_delete(
         self, _operation: DeleteOperation, context: OperationContext
@@ -175,7 +159,6 @@ class OperationDispatcher:
     def __init__(self, visitor: OperationVisitor | None = None) -> None:
         self._operations: dict[str, RecoveryOperation] = {
             "prepare": PrepareOperation(),
-            "prepare-delete": PrepareDeleteOperation(),
             "delete": DeleteOperation(),
             "restore": RestoreOperation(),
             "cleanup": CleanupOperation(),

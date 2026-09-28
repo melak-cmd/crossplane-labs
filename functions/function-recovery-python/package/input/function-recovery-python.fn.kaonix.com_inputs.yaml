@@ -30,7 +30,6 @@ spec:
                 - delete
                 - restore
                 - cleanup
-                - prepare-delete
                 - resume
                 type: string
               target:

@@ -1,8 +1,8 @@
 # function-recovery-python
 
 A Python implementation of the `function-recovery` Crossplane Operation
-Function. It supports `prepare`, `prepare-delete`, `delete`, `restore`,
-`cleanup`, and `resume` modes for CloudNativePG Clusters.
+Function. It supports `prepare`, `delete`, `restore`, `cleanup`, and `resume`
+modes for CloudNativePG Clusters.
 
 The package advertises the `operation` capability. Each Operation step must
 provide the PostgreSQL XR as the required resource `postgresql`. Restore reads
@@ -13,8 +13,7 @@ input. Its input API is
 `function-recovery-python.fn.kaonix.com/v1beta1`.
 
 Prepare pauses the PostgreSQL XR and stores a sanitized Cluster manifest in a
-ConfigMap. `prepare-delete` does both and waits for the Cluster to disappear.
-Restore creates the Cluster from that plan with `spec.bootstrap.recovery`,
+ConfigMap. Restore creates the Cluster from that plan with `spec.bootstrap.recovery`,
 accepts an identical retry, and waits for `Ready=True`. Cleanup removes only the
 recovery bootstrap. Kubernetes access uses the function Pod's in-cluster
 service account; the existing `function-recovery-runtime` configuration and

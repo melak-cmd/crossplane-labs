@@ -8,7 +8,7 @@ from typing import Any
 CNPG_API_VERSION = "postgresql.cnpg.io/v1"
 DATABASE_API_VERSION = "database.kaonix.inc.fr/v1alpha1"
 PLAN_DATA_KEY = "manifest.json"
-MODES = {"prepare", "prepare-delete", "delete", "restore", "cleanup", "resume"}
+MODES = {"prepare", "delete", "restore", "cleanup", "resume"}
 
 
 class InputError(ValueError):
@@ -95,7 +95,7 @@ def validate_input(value: RecoveryInput) -> None:
         msg = "target name and namespace are required"
         raise InputError(msg)
     if value.mode not in MODES:
-        msg = "mode must be prepare, restore, delete, cleanup, prepare-delete, or resume"
+        msg = "mode must be prepare, restore, delete, cleanup, or resume"
         raise InputError(msg)
     if value.mode in {"delete", "cleanup", "resume"}:
         if value.backup_name is not None or value.backup_namespace is not None:
@@ -105,7 +105,7 @@ def validate_input(value: RecoveryInput) -> None:
     if not value.plan_name:
         msg = "planName is required"
         raise InputError(msg)
-    if value.mode in {"prepare", "prepare-delete"}:
+    if value.mode == "prepare":
         if value.backup_name is not None or value.backup_namespace is not None:
             msg = "prepare modes do not accept a Backup reference"
             raise InputError(msg)

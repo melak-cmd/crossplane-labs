@@ -217,31 +217,6 @@ class TestFunctionRunner(unittest.IsolatedAsyncioTestCase):
 
 
 class TestOperationDispatcher(unittest.TestCase):
-    def test_prepare_delete_persists_plan_before_deleting_cluster(self) -> None:
-        client = Mock()
-        client.get_cluster.return_value = {
-            "apiVersion": "postgresql.cnpg.io/v1",
-            "kind": "Cluster",
-            "metadata": {"name": "orders-primary", "namespace": "platform"},
-        }
-        context = OperationContext(
-            RecoveryInput(
-                mode="prepare-delete",
-                namespace="platform",
-                plan_name="orders-plan",
-                target_name="orders-primary",
-            ),
-            postgresql={},
-            cluster_client=client,
-        )
-
-        OperationDispatcher().execute(context)
-
-        self.assertEqual(
-            ["get_cluster", "prepare_recovery", "delete_and_wait"],
-            [call[0] for call in client.method_calls],
-        )
-
     def test_delete_and_cleanup_dispatch_to_their_commands(self) -> None:
         for mode, method in (
             ("delete", "delete_and_wait"),
