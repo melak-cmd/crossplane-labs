@@ -103,6 +103,77 @@ class TestFunctionRunner(unittest.IsolatedAsyncioTestCase):
             resource.struct_to_dict(rsp.output),
         )
 
+    async def test_watched_restore_request_resumes_dynamic_postgresql(self) -> None:
+        postgresql = {
+            "apiVersion": "database.kaonix.inc.fr/v1alpha1",
+            "kind": "PostgreSQL",
+            "metadata": {"name": "orders", "namespace": "platform"},
+            "spec": {
+                "crossplane": {
+                    "resourceRefs": [
+                        {
+                            "apiVersion": "postgresql.cnpg.io/v1",
+                            "kind": "Cluster",
+                            "name": "orders-primary",
+                        }
+                    ]
+                }
+            },
+        }
+        restore_request = {
+            "apiVersion": "database.kaonix.inc.fr/v1alpha1",
+            "kind": "DatabaseRestore",
+            "metadata": {"name": "orders"},
+            "spec": {
+                "backupName": "orders-backup",
+                "target": {"namespace": "platform"},
+            },
+        }
+        req = fnv1.RunFunctionRequest(
+            input=resource.dict_to_struct(
+                {
+                    "spec": {
+                        "mode": "resume",
+                        "target": {},
+                        "watchedRequest": True,
+                    }
+                }
+            )
+        )
+        req.required_resources["ops.crossplane.io/watched-resource"].items.add(
+            resource=resource.dict_to_struct(restore_request)
+        )
+        client = Mock()
+        client.get_postgresql.return_value = postgresql
+
+        rsp = await fn.FunctionRunner(client).RunFunction(req, None)
+
+        self.assertEqual(fnv1.STATUS_CONDITION_TRUE, rsp.conditions[0].status)
+        client.acknowledge_restore_request.assert_called_once_with("orders")
+        client.get_postgresql.assert_called_once_with("platform", "orders")
+        client.resume_postgresql.assert_called_once_with("platform", "orders")
+
+    async def test_watched_tombstone_is_successful_noop(self) -> None:
+        req = fnv1.RunFunctionRequest(
+            input=resource.dict_to_struct(
+                {
+                    "spec": {
+                        "mode": "resume",
+                        "target": {},
+                        "watchedRequest": True,
+                    }
+                }
+            )
+        )
+        client = Mock()
+
+        rsp = await fn.FunctionRunner(client).RunFunction(req, None)
+
+        self.assertEqual(fnv1.STATUS_CONDITION_TRUE, rsp.conditions[0].status)
+        self.assertEqual("Succeeded", resource.struct_to_dict(rsp.output)["status"])
+        client.get_postgresql.assert_not_called()
+        client.resume_postgresql.assert_not_called()
+
     async def test_invalid_recovery_plan_returns_false_condition(self) -> None:
         postgresql = {
             "apiVersion": "database.kaonix.inc.fr/v1alpha1",
@@ -175,6 +246,7 @@ class TestOperationDispatcher(unittest.TestCase):
         for mode, method in (
             ("delete", "delete_and_wait"),
             ("cleanup", "remove_recovery"),
+            ("resume", "resume_postgresql"),
         ):
             with self.subTest(mode=mode):
                 client = Mock()
@@ -184,14 +256,14 @@ class TestOperationDispatcher(unittest.TestCase):
                         namespace="platform",
                         target_name="orders-primary",
                     ),
-                    postgresql={},
+                    postgresql={"metadata": {"name": "orders"}},
                     cluster_client=client,
                 )
 
                 OperationDispatcher().execute(context)
 
                 getattr(client, method).assert_called_once_with(
-                    "platform", "orders-primary"
+                    "platform", "orders" if mode == "resume" else "orders-primary"
                 )
 
 

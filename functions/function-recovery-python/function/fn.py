@@ -65,8 +65,11 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
         try:
             function_input = parse_input(input_data)
             operation = function_input.mode
-            postgresql_resources = request.get_required_resources(req, "postgresql")
-            if len(postgresql_resources) != 1:
+            postgresql = self._resolve_postgresql(req, function_input)
+            if postgresql is None and function_input.watched_request:
+                _set_success(rsp, status_subject, operation)
+                return rsp
+            if postgresql is None:
                 message = MESSAGE_POSTGRESQL_UNRESOLVED
                 _set_condition(
                     rsp,
@@ -80,7 +83,6 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                     OperationStatusEvent(operation, OPERATION_STATUS_FAILED, message)
                 )
                 return rsp
-            postgresql = postgresql_resources[0]
             cluster_name = cluster_name_from_postgresql(postgresql)
             function_input.target_name = cluster_name
             validate_input(function_input)
@@ -144,20 +146,69 @@ class FunctionRunner(grpcv1.FunctionRunnerService):
                 OperationStatusEvent(operation, OPERATION_STATUS_FAILED, message)
             )
         else:
-            message = MESSAGE_OPERATION_SUCCESS.format(operation=operation)
-            _set_condition(
-                rsp,
-                fnv1.STATUS_CONDITION_TRUE,
-                REASON_SUCCESS,
-                message,
-            )
-            status_subject.notify(
-                OperationStatusEvent(
-                    operation, OPERATION_STATUS_SUCCEEDED, message
-                )
-            )
+            _set_success(rsp, status_subject, operation)
 
         return rsp
+
+    def _resolve_postgresql(
+        self, req: fnv1.RunFunctionRequest, function_input
+    ) -> dict | None:
+        if not function_input.watched_request:
+            resources = request.get_required_resources(req, "postgresql")
+            return resources[0] if len(resources) == 1 else None
+
+        resources = request.get_required_resources(
+            req, "ops.crossplane.io/watched-resource"
+        )
+        if len(resources) != 1:
+            return None
+        restore_request = resources[0]
+        if (
+            restore_request.get("apiVersion") != "database.kaonix.inc.fr/v1alpha1"
+            or restore_request.get("kind") != "DatabaseRestore"
+        ):
+            message = "watched resource is not a DatabaseRestore request"
+            raise InputError(message)
+
+        request_name = restore_request.get("metadata", {}).get("name", "")
+        spec = restore_request.get("spec", {})
+        backup_name = spec.get("backupName")
+        target = spec.get("target", {})
+        namespace = target.get("namespace") if isinstance(target, dict) else None
+        if not request_name or not isinstance(backup_name, str) or not backup_name:
+            message = "watched DatabaseRestore has no spec.backupName"
+            raise InputError(message)
+        if not isinstance(namespace, str) or not namespace:
+            message = "watched DatabaseRestore has no spec.target.namespace"
+            raise InputError(message)
+        if function_input.mode not in {
+            "prepare",
+            "delete",
+            "restore",
+            "cleanup",
+            "resume",
+        }:
+            message = (
+                "watched DatabaseRestore has unsupported mode "
+                f"{function_input.mode!r}"
+            )
+            raise InputError(message)
+
+        self.cluster_client.acknowledge_restore_request(request_name)
+        function_input.namespace = namespace
+        function_input.plan_name = f"{request_name}-recovery-plan"
+        if function_input.mode == "restore":
+            function_input.backup_name = backup_name
+            function_input.backup_namespace = namespace
+        return self.cluster_client.get_postgresql(namespace, request_name)
+
+
+def _set_success(rsp, status_subject, operation: str) -> None:
+    message = MESSAGE_OPERATION_SUCCESS.format(operation=operation)
+    _set_condition(rsp, fnv1.STATUS_CONDITION_TRUE, REASON_SUCCESS, message)
+    status_subject.notify(
+        OperationStatusEvent(operation, OPERATION_STATUS_SUCCEEDED, message)
+    )
 
 
 def _operation_mode(value: dict) -> str:

@@ -51,6 +51,11 @@ class OperationVisitor(Protocol):
     def visit_cleanup(
         self, operation: CleanupOperation, context: OperationContext
     ) -> None: ...
+    def visit_resume(
+        self, operation: ResumeOperation, context: OperationContext
+    ) -> None:
+        """Visit the operation that resumes PostgreSQL reconciliation."""
+        ...
 
 
 class RecoveryOperation(Protocol):
@@ -94,6 +99,14 @@ class CleanupOperation:
 
     def accept(self, visitor: OperationVisitor, context: OperationContext) -> None:
         visitor.visit_cleanup(self, context)
+
+
+class ResumeOperation:
+    """Visitor element for resuming the PostgreSQL XR."""
+
+    def accept(self, visitor: OperationVisitor, context: OperationContext) -> None:
+        """Dispatch the resume operation to its visitor."""
+        visitor.visit_resume(self, context)
 
 
 class RecoveryOperationVisitor:
@@ -147,6 +160,14 @@ class RecoveryOperationVisitor:
         value = context.function_input
         context.cluster_client.remove_recovery(value.namespace, value.target_name)
 
+    def visit_resume(
+        self, _operation: ResumeOperation, context: OperationContext
+    ) -> None:
+        """Resume reconciliation for the target PostgreSQL XR."""
+        value = context.function_input
+        name = context.postgresql.get("metadata", {}).get("name", "")
+        context.cluster_client.resume_postgresql(value.namespace, name)
+
 
 class OperationDispatcher:
     """Look up an operation and pass it to the recovery visitor."""
@@ -158,6 +179,7 @@ class OperationDispatcher:
             "delete": DeleteOperation(),
             "restore": RestoreOperation(),
             "cleanup": CleanupOperation(),
+            "resume": ResumeOperation(),
         }
         self._visitor = visitor or RecoveryOperationVisitor()
 

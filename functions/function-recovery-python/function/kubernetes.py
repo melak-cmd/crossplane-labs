@@ -52,6 +52,48 @@ class KubernetesClient:
             .to_dict()
         )
 
+    def get_postgresql(self, namespace: str, name: str) -> dict[str, Any]:
+        """Fetch a namespaced PostgreSQL XR as a dictionary."""
+        return (
+            self._resource("database.kaonix.inc.fr/v1alpha1", "PostgreSQL")
+            .get(name=name, namespace=namespace)
+            .to_dict()
+        )
+
+    def acknowledge_restore_request(self, name: str) -> None:
+        """Remove the one-shot label that triggered this restore."""
+        requests = self._resource("database.kaonix.inc.fr/v1alpha1", "DatabaseRestore")
+        current = requests.get(name=name).to_dict()
+        labels = current.get("metadata", {}).get("labels", {})
+        trigger = labels.get("recovery.kaonix.inc.fr/trigger")
+        if not trigger:
+            return
+        if trigger != "requested":
+            msg = (
+                f"DatabaseRestore {name!r} has unexpected trigger label "
+                f"value {trigger!r}"
+            )
+            raise RuntimeError(msg)
+        requests.patch(
+            name=name,
+            body={
+                "metadata": {
+                    "labels": {"recovery.kaonix.inc.fr/trigger": None}
+                }
+            },
+            content_type="application/merge-patch+json",
+        )
+
+    def resume_postgresql(self, namespace: str, name: str) -> None:
+        """Clear the Crossplane pause on a PostgreSQL XR."""
+        postgresqls = self._resource("database.kaonix.inc.fr/v1alpha1", "PostgreSQL")
+        postgresqls.patch(
+            name=name,
+            namespace=namespace,
+            body={"metadata": {"annotations": {"crossplane.io/paused": "false"}}},
+            content_type="application/merge-patch+json",
+        )
+
     def prepare_recovery(
         self, postgresql: dict[str, Any], plan: dict[str, Any]
     ) -> None:

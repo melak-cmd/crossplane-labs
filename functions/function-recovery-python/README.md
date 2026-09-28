@@ -1,8 +1,8 @@
 # function-recovery-python
 
 A Python implementation of the `function-recovery` Crossplane Operation
-Function. It supports `prepare`, `prepare-delete`, `delete`, `restore`, and
-`cleanup` modes for CloudNativePG Clusters.
+Function. It supports `prepare`, `prepare-delete`, `delete`, `restore`,
+`cleanup`, and `resume` modes for CloudNativePG Clusters.
 
 The package advertises the `operation` capability. Each Operation step must
 provide the PostgreSQL XR as the required resource `postgresql`. Restore reads
@@ -20,19 +20,24 @@ recovery bootstrap. Kubernetes access uses the function Pod's in-cluster
 service account; the existing `function-recovery-runtime` configuration and
 RBAC in `install/function-recovery-rbac.yaml` are reused.
 
+For `DatabaseRestore` WatchOperations, the watched request provides the
+PostgreSQL XR name, target namespace, and backup name. The Function acknowledges
+the trigger label, treats the selector's synthetic deletion event as a no-op,
+and can resume the request-derived PostgreSQL XR after cleanup.
+
 ## Test and Build
 
 ```shell
 cd functions/function-recovery-python
 hatch test
 hatch fmt --check
-docker build . --tag=registry.localhost:5000/function-recovery-python:v0.1.19
+docker build . --tag=registry.localhost:5000/function-recovery-python:v0.1.30
 crossplane xpkg build \
    --package-root=package \
-   --embed-runtime-image=registry.localhost:5000/function-recovery-python:v0.1.19 \
+   --embed-runtime-image=registry.localhost:5000/function-recovery-python:v0.1.30 \
    --package-file=function-recovery-python.xpkg
 crossplane xpkg push -f function-recovery-python.xpkg \
-   registry.localhost:5000/function-recovery-python:v0.1.19
+   registry.localhost:5000/function-recovery-python:v0.1.30
 ```
 
 The Python Function was initialized with `crossplane xpkg init` using

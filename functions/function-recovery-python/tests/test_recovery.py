@@ -12,6 +12,15 @@ from function.recovery import (
 
 
 class TestRecovery(unittest.TestCase):
+    def test_resume_requires_only_a_target(self) -> None:
+        validate_input(
+            RecoveryInput(
+                mode="resume",
+                namespace="platform",
+                target_name="orders",
+            )
+        )
+
     def test_recovery_plan_removes_server_fields_without_mutating_source(self) -> None:
         cluster = {
             "apiVersion": "postgresql.cnpg.io/v1",

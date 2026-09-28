@@ -8,7 +8,7 @@ from typing import Any
 CNPG_API_VERSION = "postgresql.cnpg.io/v1"
 DATABASE_API_VERSION = "database.kaonix.inc.fr/v1alpha1"
 PLAN_DATA_KEY = "manifest.json"
-MODES = {"prepare", "prepare-delete", "delete", "restore", "cleanup"}
+MODES = {"prepare", "prepare-delete", "delete", "restore", "cleanup", "resume"}
 
 
 class InputError(ValueError):
@@ -25,6 +25,7 @@ class RecoveryInput:
     backup_name: str | None = None
     backup_namespace: str | None = None
     target_name: str = ""
+    watched_request: bool = False
 
 
 def parse_input(value: dict[str, Any]) -> RecoveryInput:
@@ -41,12 +42,17 @@ def parse_input(value: dict[str, Any]) -> RecoveryInput:
     if backup is not None and not isinstance(backup, dict):
         msg = "backup must be an object"
         raise InputError(msg)
+    watched_request = spec.get("watchedRequest", False)
+    if not isinstance(watched_request, bool):
+        msg = "watchedRequest must be a boolean"
+        raise InputError(msg)
     return RecoveryInput(
         mode=spec.get("mode", ""),
         namespace=target.get("namespace", ""),
         plan_name=spec.get("planName"),
         backup_name=backup.get("name") if backup else None,
         backup_namespace=backup.get("namespace") if backup else None,
+        watched_request=watched_request,
     )
 
 
@@ -89,9 +95,9 @@ def validate_input(value: RecoveryInput) -> None:
         msg = "target name and namespace are required"
         raise InputError(msg)
     if value.mode not in MODES:
-        msg = "mode must be prepare, restore, delete, cleanup, or prepare-delete"
+        msg = "mode must be prepare, restore, delete, cleanup, prepare-delete, or resume"
         raise InputError(msg)
-    if value.mode in {"delete", "cleanup"}:
+    if value.mode in {"delete", "cleanup", "resume"}:
         if value.backup_name is not None or value.backup_namespace is not None:
             msg = "delete and cleanup modes do not accept a Backup reference"
             raise InputError(msg)

@@ -7,6 +7,57 @@ from function.kubernetes import KubernetesClient
 
 
 class TestKubernetesClient(unittest.TestCase):
+    def test_get_postgresql_fetches_namespaced_xr(self) -> None:
+        postgresqls = Mock()
+        postgresqls.get.return_value.to_dict.return_value = {"kind": "PostgreSQL"}
+        dynamic_client = Mock()
+        dynamic_client.resources.get.return_value = postgresqls
+
+        postgresql = KubernetesClient(dynamic_client).get_postgresql(
+            "platform", "orders"
+        )
+
+        self.assertEqual({"kind": "PostgreSQL"}, postgresql)
+        dynamic_client.resources.get.assert_called_once_with(
+            api_version="database.kaonix.inc.fr/v1alpha1", kind="PostgreSQL"
+        )
+        postgresqls.get.assert_called_once_with(name="orders", namespace="platform")
+
+    def test_acknowledge_restore_request_removes_trigger_label(self) -> None:
+        requests = Mock()
+        requests.get.return_value.to_dict.return_value = {
+            "metadata": {
+                "labels": {"recovery.kaonix.inc.fr/trigger": "requested"}
+            }
+        }
+        dynamic_client = Mock()
+        dynamic_client.resources.get.return_value = requests
+
+        KubernetesClient(dynamic_client).acknowledge_restore_request("orders")
+
+        dynamic_client.resources.get.assert_called_once_with(
+            api_version="database.kaonix.inc.fr/v1alpha1", kind="DatabaseRestore"
+        )
+        requests.patch.assert_called_once_with(
+            name="orders",
+            body={"metadata": {"labels": {"recovery.kaonix.inc.fr/trigger": None}}},
+            content_type="application/merge-patch+json",
+        )
+
+    def test_resume_postgresql_sets_unpaused_annotation(self) -> None:
+        postgresqls = Mock()
+        dynamic_client = Mock()
+        dynamic_client.resources.get.return_value = postgresqls
+
+        KubernetesClient(dynamic_client).resume_postgresql("platform", "orders")
+
+        postgresqls.patch.assert_called_once_with(
+            name="orders",
+            namespace="platform",
+            body={"metadata": {"annotations": {"crossplane.io/paused": "false"}}},
+            content_type="application/merge-patch+json",
+        )
+
     def test_get_recovery_plan_fetches_named_configmap(self) -> None:
         configmaps = Mock()
         configmaps.get.return_value.to_dict.return_value = {
