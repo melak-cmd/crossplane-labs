@@ -29,10 +29,6 @@ type PostgreSQLResumer interface {
 	ResumePostgreSQL(context.Context, string, string) error
 }
 
-type RestoreRequestAcknowledger interface {
-	AcknowledgeRestoreRequest(context.Context, string) error
-}
-
 type ClusterRestorer interface {
 	CreateRestoredCluster(context.Context, *unstructured.Unstructured) error
 }

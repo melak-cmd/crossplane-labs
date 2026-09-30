@@ -59,7 +59,7 @@ spec:
       host: uptest-app.127.0.0.1.nip.io
       path: /
 ---
-apiVersion: database.kaonix.inc.fr/v1alpha1
+apiVersion: database.nuagik.sncf.fr/v1alpha1
 kind: PostgreSQL
 metadata:
   name: uptest-db
@@ -77,7 +77,7 @@ spec:
     size: small
     instances: 1
 ---
-apiVersion: database.kaonix.inc.fr/v1alpha1
+apiVersion: database.nuagik.sncf.fr/v1alpha1
 kind: PostgreSQL
 metadata:
   name: uptest-db-multi

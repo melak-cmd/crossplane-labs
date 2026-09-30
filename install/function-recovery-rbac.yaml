@@ -23,16 +23,16 @@ rules:
   - update
 - apiGroups:
   - kaonix.com
-  - database.kaonix.inc.fr
+  - database.nuagik.sncf.fr
   resources:
   - postgresqls
   verbs:
   - get
   - patch
 - apiGroups:
-  - database.kaonix.inc.fr
+  - database.nuagik.sncf.fr
   resources:
-  - databaserestores
+  - postgresqlrestores
   verbs:
   - get
   - patch
@@ -153,9 +153,9 @@ metadata:
     rbac.crossplane.io/aggregate-to-crossplane: "true"
 rules:
 - apiGroups:
-  - database.kaonix.inc.fr
+  - database.nuagik.sncf.fr
   resources:
-  - databaserestores
+  - postgresqlrestores
   verbs:
   - get
   - list

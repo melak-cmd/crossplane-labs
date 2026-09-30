@@ -39,7 +39,7 @@ func TestReadClusterName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			database := &unstructured.Unstructured{Object: map[string]interface{}{
-				"apiVersion": "database.kaonix.inc.fr/v1alpha1",
+				"apiVersion": "database.nuagik.sncf.fr/v1alpha1",
 				"kind":       "PostgreSQL",
 				"spec": map[string]interface{}{
 					"crossplane": map[string]interface{}{"resourceRefs": tt.refs},
@@ -58,7 +58,7 @@ func TestReadClusterName(t *testing.T) {
 
 func TestReadClusterNameRejectsUnexpectedResourceKind(t *testing.T) {
 	database := &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "database.kaonix.inc.fr/v1alpha1",
+		"apiVersion": "database.nuagik.sncf.fr/v1alpha1",
 		"kind":       "Database",
 		"spec":       map[string]interface{}{"crossplane": map[string]interface{}{"resourceRefs": []interface{}{}}},
 	}}

@@ -6,7 +6,7 @@ metadata:
   name: database-cnpg
 spec:
   compositeTypeRef:
-    apiVersion: database.kaonix.inc.fr/v1alpha1
+    apiVersion: database.nuagik.sncf.fr/v1alpha1
     kind: PostgreSQL
   mode: Pipeline
   pipeline:
@@ -93,7 +93,7 @@ spec:
               name: {{ $id }}
           {{ end }}
           ---
-          apiVersion: database.kaonix.inc.fr/v1alpha1
+          apiVersion: database.nuagik.sncf.fr/v1alpha1
           kind: PostgreSQL
           status:
             host: {{ $id }}-rw.{{ $namespace }}.svc

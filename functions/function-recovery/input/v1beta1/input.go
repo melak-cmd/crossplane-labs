@@ -1,6 +1,6 @@
 // Package v1beta1 contains the input type for this Function.
 // +kubebuilder:object:generate=true
-// +groupName=function-recovery.fn.kaonix.com
+// +groupName=function-recovery.fn.database.nuagik.sncf.fr
 // +versionName=v1beta1
 package v1beta1
 

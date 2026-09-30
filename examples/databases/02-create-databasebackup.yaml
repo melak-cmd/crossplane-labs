@@ -1,4 +1,4 @@
-apiVersion: database.kaonix.inc.fr/v1alpha1
+apiVersion: database.nuagik.sncf.fr/v1alpha1
 kind: DatabaseBackup
 metadata:
   name: madmax-backup

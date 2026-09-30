@@ -4,10 +4,9 @@ metadata:
   name: database-restore
 spec:
   watch:
-    apiVersion: database.kaonix.inc.fr/v1alpha1
-    kind: DatabaseRestore
-    matchLabels:
-      recovery.kaonix.inc.fr/trigger: requested
+    apiVersion: database.nuagik.sncf.fr/v1alpha1
+    kind: PostgreSQLRestore
+    matchLabels: {}
   concurrencyPolicy: Forbid
   operationTemplate:
     spec:
@@ -17,7 +16,7 @@ spec:
         functionRef:
           name: function-recovery
         input:
-          apiVersion: function-recovery.fn.kaonix.com/v1beta1
+          apiVersion: function-recovery.fn.database.nuagik.sncf.fr/v1beta1
           kind: Input
           spec:
             mode: prepare
@@ -27,7 +26,7 @@ spec:
         functionRef:
           name: function-recovery
         input:
-          apiVersion: function-recovery.fn.kaonix.com/v1beta1
+          apiVersion: function-recovery.fn.database.nuagik.sncf.fr/v1beta1
           kind: Input
           spec:
             mode: delete
@@ -37,7 +36,7 @@ spec:
         functionRef:
           name: function-recovery
         input:
-          apiVersion: function-recovery.fn.kaonix.com/v1beta1
+          apiVersion: function-recovery.fn.database.nuagik.sncf.fr/v1beta1
           kind: Input
           spec:
             mode: restore
@@ -47,7 +46,7 @@ spec:
         functionRef:
           name: function-recovery
         input:
-          apiVersion: function-recovery.fn.kaonix.com/v1beta1
+          apiVersion: function-recovery.fn.database.nuagik.sncf.fr/v1beta1
           kind: Input
           spec:
             mode: cleanup
@@ -57,7 +56,7 @@ spec:
         functionRef:
           name: function-recovery
         input:
-          apiVersion: function-recovery.fn.kaonix.com/v1beta1
+          apiVersion: function-recovery.fn.database.nuagik.sncf.fr/v1beta1
           kind: Input
           spec:
             mode: resume

@@ -21,7 +21,6 @@ type Handler struct {
 		operations.RecoveryPlanReader
 		operations.PostgreSQLReader
 		operations.PostgreSQLResumer
-		operations.RestoreRequestAcknowledger
 		operations.ClusterRestorer
 		operations.ClusterDeleter
 		operations.RecoveryCleaner
@@ -35,7 +34,6 @@ func New(log logging.Logger, clusterClient interface {
 	operations.RecoveryPlanReader
 	operations.PostgreSQLReader
 	operations.PostgreSQLResumer
-	operations.RestoreRequestAcknowledger
 	operations.ClusterRestorer
 	operations.ClusterDeleter
 	operations.RecoveryCleaner
@@ -101,25 +99,25 @@ func (h *Handler) databaseForRequest(ctx context.Context, req *fnv1.RunFunctionR
 		return nil, false, err
 	}
 	if resolved {
-		if request.GetAPIVersion() != "database.kaonix.inc.fr/v1alpha1" || request.GetKind() != "DatabaseRestore" {
-			return nil, true, fmt.Errorf("watched resource is not a DatabaseRestore request")
+		if request.GetAPIVersion() != "database.nuagik.sncf.fr/v1alpha1" || request.GetKind() != "PostgreSQLRestore" {
+			return nil, true, fmt.Errorf("watched resource is not a PostgreSQLRestore request")
 		}
 		if in.Spec.Mode != "restore" {
 			if in.Spec.Mode != "prepare" && in.Spec.Mode != "delete" && in.Spec.Mode != "cleanup" && in.Spec.Mode != "resume" {
-				return nil, true, fmt.Errorf("watched DatabaseRestore has unsupported mode %q", in.Spec.Mode)
+				return nil, true, fmt.Errorf("watched PostgreSQLRestore has unsupported mode %q", in.Spec.Mode)
 			}
 		}
-		name := request.GetName()
+		name, found, err := unstructured.NestedString(request.Object, "spec", "name")
+		if err != nil || !found || name == "" {
+			return nil, true, fmt.Errorf("watched PostgreSQLRestore has no spec.name")
+		}
 		backupName, found, err := unstructured.NestedString(request.Object, "spec", "backupName")
 		if err != nil || !found || backupName == "" {
-			return nil, true, fmt.Errorf("watched DatabaseRestore has no spec.backupName")
+			return nil, true, fmt.Errorf("watched PostgreSQLRestore has no spec.backupName")
 		}
-		targetNamespace, found, err := unstructured.NestedString(request.Object, "spec", "target", "namespace")
-		if err != nil || !found || targetNamespace == "" {
-			return nil, true, fmt.Errorf("watched DatabaseRestore has no spec.target.namespace")
-		}
-		if err := h.clusterClient.AcknowledgeRestoreRequest(ctx, name); err != nil {
-			return nil, true, fmt.Errorf("cannot acknowledge DatabaseRestore %q: %w", name, err)
+		targetNamespace := request.GetNamespace()
+		if targetNamespace == "" {
+			return nil, true, fmt.Errorf("watched PostgreSQLRestore has no namespace")
 		}
 		in.Spec.Target.Namespace = targetNamespace
 		in.Spec.PlanName = name + "-recovery-plan"

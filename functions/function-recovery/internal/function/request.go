@@ -26,7 +26,7 @@ func ReadRequiredResource(req *fnv1.RunFunctionRequest, name string) (*unstructu
 }
 
 func ReadClusterName(database *unstructured.Unstructured) (string, error) {
-	if database.GetAPIVersion() != "database.kaonix.inc.fr/v1alpha1" || database.GetKind() != "PostgreSQL" {
+	if database.GetAPIVersion() != "database.nuagik.sncf.fr/v1alpha1" || database.GetKind() != "PostgreSQL" {
 		return "", fmt.Errorf("required resource is not a PostgreSQL XR")
 	}
 	refs, found, err := unstructured.NestedSlice(database.Object, "spec", "crossplane", "resourceRefs")

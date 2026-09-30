@@ -4,7 +4,7 @@ metadata:
   name: platform
 spec:
   ignoreCrossplaneConstraints: false
-  package: registry.localhost:5000/platform:v0.1.29
+  package: registry.localhost:5000/platform:v0.1.37
   packagePullPolicy: IfNotPresent
   revisionActivationPolicy: Automatic
   revisionHistoryLimit: 0

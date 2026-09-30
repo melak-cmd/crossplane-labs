@@ -7,8 +7,6 @@ schemas/
 __pycache__/
 *.pyc
 
-# Vendored Go dependencies
-functions/function-pause/vendor/
-
 .venv
 *.xpkg
+openspec

@@ -29,7 +29,7 @@ KIND_TO_RESOURCE = {
 REQUIRED_VERBS = {"get", "list", "watch", "create", "update", "patch", "delete"}
 WATCHED_VERBS = {"get", "list", "watch"}
 AGGREGATION_LABEL = "rbac.crossplane.io/aggregate-to-crossplane"
-WATCHED_RESOURCES = {("database.kaonix.inc.fr", "databaserestores")}
+WATCHED_RESOURCES = {("database.nuagik.sncf.fr", "postgresqlrestores")}
 
 
 def composition_templates():

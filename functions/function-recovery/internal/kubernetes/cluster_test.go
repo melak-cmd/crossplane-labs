@@ -66,7 +66,7 @@ func TestGetRecoveryPlanUsesPlanNameAndNamespace(t *testing.T) {
 
 func TestGetPostgreSQLUsesNameAndNamespace(t *testing.T) {
 	database := &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "database.kaonix.inc.fr/v1alpha1",
+		"apiVersion": "database.nuagik.sncf.fr/v1alpha1",
 		"kind":       "PostgreSQL",
 		"metadata":   map[string]interface{}{"name": "orders", "namespace": "platform"},
 	}}
@@ -84,7 +84,7 @@ func TestGetPostgreSQLUsesNameAndNamespace(t *testing.T) {
 
 func TestResumePostgreSQLClearsPausedState(t *testing.T) {
 	database := &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "database.kaonix.inc.fr/v1alpha1",
+		"apiVersion": "database.nuagik.sncf.fr/v1alpha1",
 		"kind":       "PostgreSQL",
 		"metadata": map[string]interface{}{
 			"name": "orders", "namespace": "platform",
@@ -103,30 +103,6 @@ func TestResumePostgreSQLClearsPausedState(t *testing.T) {
 	}
 	if got := updated.GetAnnotations()["crossplane.io/paused"]; got != "false" {
 		t.Fatalf("expected paused annotation to be false, got %q", got)
-	}
-}
-
-func TestAcknowledgeRestoreRequestRemovesTriggerLabel(t *testing.T) {
-	request := &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "database.kaonix.inc.fr/v1alpha1",
-		"kind":       "DatabaseRestore",
-		"metadata": map[string]interface{}{
-			"name":   "orders",
-			"labels": map[string]interface{}{restoreRequestTriggerLabel: "requested"},
-		},
-	}}
-	client := fake.NewSimpleDynamicClient(runtime.NewScheme(), request)
-	clusterClient := &ClusterClient{client: client}
-
-	if err := clusterClient.AcknowledgeRestoreRequest(context.Background(), "orders"); err != nil {
-		t.Fatalf("AcknowledgeRestoreRequest returned an error: %v", err)
-	}
-	updated, err := client.Resource(databaseRestoreGVR).Get(context.Background(), "orders", metav1.GetOptions{})
-	if err != nil {
-		t.Fatalf("failed to read DatabaseRestore after acknowledgement: %v", err)
-	}
-	if _, found := updated.GetLabels()[restoreRequestTriggerLabel]; found {
-		t.Fatal("expected the restore trigger label to be removed")
 	}
 }
 
@@ -285,7 +261,7 @@ func TestRemoveRecoveryIsIdempotent(t *testing.T) {
 
 func TestPrepareRecoveryPausesAndPersistsPlanWithoutDeletingCluster(t *testing.T) {
 	database := &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "database.kaonix.inc.fr/v1alpha1",
+		"apiVersion": "database.nuagik.sncf.fr/v1alpha1",
 		"kind":       "PostgreSQL",
 		"metadata":   map[string]interface{}{"name": "orders-database", "namespace": "platform"},
 	}}
@@ -322,7 +298,7 @@ func TestPrepareRecoveryPausesAndPersistsPlanWithoutDeletingCluster(t *testing.T
 
 func TestPrepareAndDeletePausesPersistsPlanAndDeletesCluster(t *testing.T) {
 	database := &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "database.kaonix.inc.fr/v1alpha1",
+		"apiVersion": "database.nuagik.sncf.fr/v1alpha1",
 		"kind":       "PostgreSQL",
 		"metadata":   map[string]interface{}{"name": "orders-database", "namespace": "platform"},
 	}}

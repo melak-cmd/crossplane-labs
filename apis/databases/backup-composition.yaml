@@ -6,7 +6,7 @@ metadata:
   name: database-backup-cnpg
 spec:
   compositeTypeRef:
-    apiVersion: database.kaonix.inc.fr/v1alpha1
+    apiVersion: database.nuagik.sncf.fr/v1alpha1
     kind: DatabaseBackup
   mode: Pipeline
   pipeline:
@@ -44,7 +44,7 @@ spec:
               name: {{ $id }}
             method: volumeSnapshot
           ---
-          apiVersion: database.kaonix.inc.fr/v1alpha1
+          apiVersion: database.nuagik.sncf.fr/v1alpha1
           kind: DatabaseBackup
           status:
             name: {{ $backupName }}

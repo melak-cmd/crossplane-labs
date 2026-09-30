@@ -11,12 +11,12 @@ spec:
     requirements:
       requiredResources:
       - requirementName: postgresql
-        apiVersion: database.kaonix.inc.fr/v1alpha1
+        apiVersion: database.nuagik.sncf.fr/v1alpha1
         kind: PostgreSQL
         name: madmax
         namespace: platform
     input:
-      apiVersion: function-recovery.fn.kaonix.com/v1beta1
+      apiVersion: function-recovery.fn.database.nuagik.sncf.fr/v1beta1
       kind: Input
       spec:
         mode: prepare
@@ -29,12 +29,12 @@ spec:
     requirements:
       requiredResources:
       - requirementName: postgresql
-        apiVersion: database.kaonix.inc.fr/v1alpha1
+        apiVersion: database.nuagik.sncf.fr/v1alpha1
         kind: PostgreSQL
         name: madmax
         namespace: platform
     input:
-      apiVersion: function-recovery.fn.kaonix.com/v1beta1
+      apiVersion: function-recovery.fn.database.nuagik.sncf.fr/v1beta1
       kind: Input
       spec:
         mode: delete
@@ -46,12 +46,12 @@ spec:
     requirements:
       requiredResources:
       - requirementName: postgresql
-        apiVersion: database.kaonix.inc.fr/v1alpha1
+        apiVersion: database.nuagik.sncf.fr/v1alpha1
         kind: PostgreSQL
         name: madmax
         namespace: platform
     input:
-      apiVersion: function-recovery.fn.kaonix.com/v1beta1
+      apiVersion: function-recovery.fn.database.nuagik.sncf.fr/v1beta1
       kind: Input
       spec:
         mode: restore
@@ -67,12 +67,12 @@ spec:
     requirements:
       requiredResources:
       - requirementName: postgresql
-        apiVersion: database.kaonix.inc.fr/v1alpha1
+        apiVersion: database.nuagik.sncf.fr/v1alpha1
         kind: PostgreSQL
         name: madmax
         namespace: platform
     input:
-      apiVersion: function-recovery.fn.kaonix.com/v1beta1
+      apiVersion: function-recovery.fn.database.nuagik.sncf.fr/v1beta1
       kind: Input
       spec:
         mode: cleanup
@@ -80,20 +80,20 @@ spec:
           namespace: platform
   - step: resume
     functionRef:
-      name: function-pause
+      name: function-recovery
     requirements:
       requiredResources:
       - requirementName: target
-        apiVersion: database.kaonix.inc.fr/v1alpha1
+        apiVersion: database.nuagik.sncf.fr/v1alpha1
         kind: PostgreSQL
         name: madmax
         namespace: platform
     input:
-      apiVersion: function-pause.fn.kaonix.com/v1beta1
+      apiVersion: function-recovery.fn.database.nuagik.sncf.fr/v1beta1
       kind: Input
       spec:
         target:
-          apiVersion: database.kaonix.inc.fr/v1alpha1
+          apiVersion: database.nuagik.sncf.fr/v1alpha1
           kind: PostgreSQL
           name: madmax
           namespace: platform

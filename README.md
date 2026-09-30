@@ -125,7 +125,7 @@ spec:
 ### Database
 
 ```yaml
-apiVersion: database.kaonix.inc.fr/v1alpha1
+apiVersion: database.nuagik.sncf.fr/v1alpha1
 kind: PostgreSQL
 metadata:
   name: my-db
@@ -151,7 +151,7 @@ The aggregated `crossplane-compose-cnpg-resources` ClusterRole in
 ProviderConfig are not installed.
 
 ```yaml
-apiVersion: database.kaonix.inc.fr/v1alpha1
+apiVersion: database.nuagik.sncf.fr/v1alpha1
 kind: PostgreSQL
 metadata:
   name: my-db
@@ -177,7 +177,7 @@ a `ScheduledBackup` named `<id>-backup`. The `Database` status reports
 On-demand backups use the `DatabaseBackup` XR:
 
 ```yaml
-apiVersion: database.kaonix.inc.fr/v1alpha1
+apiVersion: database.nuagik.sncf.fr/v1alpha1
 kind: DatabaseBackup
 metadata:
   name: my-db-manual
@@ -242,29 +242,28 @@ cluster identity. To recover a database from a volume-snapshot backup:
 3. Point the application at the restored cluster's service
    (`<name>-rw.<namespace>.svc`) and verify the data.
 
-To trigger a restore Operation, apply a labeled `DatabaseRestore` request:
+To trigger a restore Operation, apply a `PostgreSQLRestore` request:
 
 ```yaml
-apiVersion: database.kaonix.inc.fr/v1alpha1
-kind: DatabaseRestore
+apiVersion: database.nuagik.sncf.fr/v1alpha1
+kind: PostgreSQLRestore
 metadata:
-  name: my-db                 # name of the PostgreSQL XR in target.namespace
-  labels:
-    recovery.kaonix.inc.fr/trigger: requested
+  generateName: postgresqlrestore-
+  namespace: platform
 spec:
-  backupName: my-db-backup    # CNPG Backup in target.namespace
-  target:
-    namespace: platform
+  name: my-db                  # PostgreSQL XR in this namespace
+  backupName: my-db-backup     # CNPG Backup in this namespace
 ```
 
-`DatabaseRestore` is cluster-scoped because Crossplane Operations are
-cluster-scoped. The `WatchOperation` matches the trigger label and runs the
-prepare, delete, restore, cleanup, and resume stages against the PostgreSQL XR
-and resources in `spec.target.namespace`. It reads the recovery plan named
-`<metadata.name>-recovery-plan`; the plan must already exist and the target CNPG
-Cluster must be absent. The function removes the trigger label when it starts,
-so later status changes do not launch another restore. A failed restore is
-one-shot; create a new request to retry it, and delete completed requests before
+`PostgreSQLRestore` is namespaced. When `metadata.name` is omitted, Kubernetes
+uses `metadata.generateName: postgresqlrestore-` and appends a unique suffix;
+callers needing a stable idempotent name can provide `metadata.name` instead.
+The `WatchOperation` runs the prepare, delete,
+restore, cleanup, and resume stages against the PostgreSQL XR named by
+`spec.name` in the request namespace, without requiring a trigger label. It
+reads the recovery plan named `<spec.name>-recovery-plan`; the plan must already
+exist and the target CNPG Cluster must be absent. A failed restore is one-shot;
+create a new request to retry it, and delete completed requests before
 restoring the same database again.
 
 ## Project Layout
@@ -275,7 +274,7 @@ crossplane-labs/
 ├── install/                # Configuration, Functions, and runtime RBAC manifests
 ├── apis/
 │   ├── apps/               # App XRD (definition.yaml) + Composition (composition.yaml)
-│   ├── databases/          # PostgreSQL and DatabaseBackup XRDs + Compositions; DatabaseRestore XRD
+│   ├── databases/          # PostgreSQL and DatabaseBackup XRDs + Compositions; PostgreSQLRestore XRD
 │   └── networks/           # Network XRD (definition.yaml) + Composition (composition.yaml)
 ├── functions/
 │   └── function-scale/     # custom Go function (scale composed Deployments)

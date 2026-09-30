@@ -22,10 +22,7 @@ var clusterGVR = schema.GroupVersionResource{
 }
 
 var configMapGVR = schema.GroupVersionResource{Version: "v1", Resource: "configmaps"}
-var postgresqlGVR = schema.GroupVersionResource{Group: "database.kaonix.inc.fr", Version: "v1alpha1", Resource: "postgresqls"}
-var databaseRestoreGVR = schema.GroupVersionResource{Group: "database.kaonix.inc.fr", Version: "v1alpha1", Resource: "databaserestores"}
-
-const restoreRequestTriggerLabel = "recovery.kaonix.inc.fr/trigger"
+var postgresqlGVR = schema.GroupVersionResource{Group: "database.nuagik.sncf.fr", Version: "v1alpha1", Resource: "postgresqls"}
 
 type ClusterClient struct {
 	client   dynamic.Interface
@@ -94,30 +91,6 @@ func (c *ClusterClient) GetPostgreSQL(ctx context.Context, namespace, name strin
 		return nil, c.initErr
 	}
 	return c.client.Resource(postgresqlGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
-}
-
-func (c *ClusterClient) AcknowledgeRestoreRequest(ctx context.Context, name string) error {
-	c.initialize()
-	if c.initErr != nil {
-		return c.initErr
-	}
-
-	requests := c.client.Resource(databaseRestoreGVR)
-	request, err := requests.Get(ctx, name, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	value := request.GetLabels()[restoreRequestTriggerLabel]
-	if value == "" {
-		return nil
-	}
-	if value != "requested" {
-		return fmt.Errorf("DatabaseRestore %q has unexpected trigger label value %q", name, value)
-	}
-
-	patch := []byte(`{"metadata":{"labels":{"recovery.kaonix.inc.fr/trigger":null}}}`)
-	_, err = requests.Patch(ctx, name, types.MergePatchType, patch, metav1.PatchOptions{})
-	return err
 }
 
 func (c *ClusterClient) CreateRestoredCluster(ctx context.Context, cluster *unstructured.Unstructured) error {

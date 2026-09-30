@@ -45,7 +45,7 @@ that Cluster again.
 ## Input
 
 ```yaml
-apiVersion: function-recovery.fn.kaonix.com/v1beta1
+apiVersion: function-recovery.fn.database.nuagik.sncf.fr/v1beta1
 kind: Input
 spec:
   mode: restore
@@ -80,15 +80,17 @@ as the required resource `postgresql`. The function reads its
 Restore reads the recovery-plan ConfigMap named by `planName` directly using
 the function's Kubernetes client and `target.namespace`.
 
-`operations/database-restore-watch.yaml` watches cluster-scoped
-`DatabaseRestore` requests labeled `recovery.kaonix.inc.fr/trigger=requested`.
-The watched request name identifies the PostgreSQL XR, `spec.target.namespace`
-selects its namespace, and `spec.backupName` selects the CNPG Backup in that
-namespace. The WatchOperation runs the prepare, delete, restore, cleanup, and
-resume stages. The recovery Function performs resume directly so it can target
-the request-derived PostgreSQL XR. It removes the trigger label before starting
-the workflow. A failed request is not automatically retried; create a new
-request after addressing the failure.
+`operations/database-restore-watch.yaml` watches namespaced
+`PostgreSQLRestore` requests without requiring a recovery trigger label.
+Restore requests may use `metadata.generateName: postgresqlrestore-` when a
+unique Kubernetes-generated name is preferred; explicit `metadata.name` remains
+supported.
+The watched request `spec.name` identifies the PostgreSQL XR, the request
+namespace selects its namespace, and `spec.backupName` selects the CNPG Backup
+in that namespace. The WatchOperation runs the prepare, delete, restore,
+cleanup, and resume stages. Restore request labels are not used as an
+activation filter or acknowledgement mechanism. A failed request is not
+automatically retried; create a new request after addressing the failure.
 
 See `examples/databases/03-prepare-recovery.yaml`,
 `examples/databases/04-restore-from-backup.yaml`, and
