@@ -16,10 +16,10 @@ spec:
 apiVersion: pkg.crossplane.io/v1
 kind: Function
 metadata:
-  name: function-recovery
+  name: function-pg-recovery
 spec:
-  package: registry.localhost:5000/function-recovery:v0.1.39
+  package: registry.localhost:5000/function-pg-recovery:v0.1.30
   runtimeConfigRef:
     apiVersion: pkg.crossplane.io/v1beta1
     kind: DeploymentRuntimeConfig
-    name: function-recovery-runtime
+    name: function-pg-recovery-runtime

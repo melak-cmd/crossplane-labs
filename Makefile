@@ -2,7 +2,7 @@ CLUSTER_NAME ?= crossplane-labs
 PKG_NAME ?= kaonix-platform
 TAG ?= v0.1.30
 
-FUNCTION_NAME ?= function-recovery
+FUNCTION_NAME ?= function-pg-recovery
 FUNCTION_IMAGE ?= registry.localhost:5000/$(FUNCTION_NAME)
 
 .PHONY: help create-cluster delete-cluster install-csi install-cnpg install-crossplane install-deps delete setup teardown restart-cnpg \

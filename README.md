@@ -147,7 +147,7 @@ Backups use the CloudNativePG **volume snapshot** method (no object store or
 credentials required). All CNPG resources are native composed CRDs managed by
 Crossplane. The aggregated `crossplane-compose-cnpg-resources` ClusterRole in
 The aggregated `crossplane-compose-cnpg-resources` ClusterRole in
-`install/function-recovery-rbac.yaml` grants Crossplane access; provider-kubernetes and its
+`install/function-pg-recovery-rbac.yaml` grants Crossplane access; provider-kubernetes and its
 ProviderConfig are not installed.
 
 ```yaml
@@ -270,7 +270,7 @@ Operation, whose steps find the work already done and do nothing (updates made
 while a restore runs do not start one, because the WatchOperation uses
 `concurrencyPolicy: Forbid`). A failed restore is one-shot; create a
 new request to retry it, and delete completed requests before restoring the same
-database again. See `functions/function-recovery/README.md` for details.
+database again. See `functions/function-pg-recovery/README.md` for details.
 
 ## Project Layout
 

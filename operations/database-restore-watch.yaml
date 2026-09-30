@@ -14,9 +14,9 @@ spec:
       pipeline:
       - step: prepare-cluster
         functionRef:
-          name: function-recovery
+          name: function-pg-recovery
         input:
-          apiVersion: function-recovery.fn.database.nuagik.sncf.fr/v1beta1
+          apiVersion: function-pg-recovery.fn.database.nuagik.sncf.fr/v1beta1
           kind: Input
           spec:
             mode: prepare
@@ -24,9 +24,9 @@ spec:
             watchedRequest: true
       - step: delete-cluster
         functionRef:
-          name: function-recovery
+          name: function-pg-recovery
         input:
-          apiVersion: function-recovery.fn.database.nuagik.sncf.fr/v1beta1
+          apiVersion: function-pg-recovery.fn.database.nuagik.sncf.fr/v1beta1
           kind: Input
           spec:
             mode: delete
@@ -34,9 +34,9 @@ spec:
             watchedRequest: true
       - step: recover
         functionRef:
-          name: function-recovery
+          name: function-pg-recovery
         input:
-          apiVersion: function-recovery.fn.database.nuagik.sncf.fr/v1beta1
+          apiVersion: function-pg-recovery.fn.database.nuagik.sncf.fr/v1beta1
           kind: Input
           spec:
             mode: restore
@@ -44,9 +44,9 @@ spec:
             watchedRequest: true
       - step: cleanup-recovery-bootstrap
         functionRef:
-          name: function-recovery
+          name: function-pg-recovery
         input:
-          apiVersion: function-recovery.fn.database.nuagik.sncf.fr/v1beta1
+          apiVersion: function-pg-recovery.fn.database.nuagik.sncf.fr/v1beta1
           kind: Input
           spec:
             mode: cleanup
@@ -54,9 +54,9 @@ spec:
             watchedRequest: true
       - step: resume
         functionRef:
-          name: function-recovery
+          name: function-pg-recovery
         input:
-          apiVersion: function-recovery.fn.database.nuagik.sncf.fr/v1beta1
+          apiVersion: function-pg-recovery.fn.database.nuagik.sncf.fr/v1beta1
           kind: Input
           spec:
             mode: resume
