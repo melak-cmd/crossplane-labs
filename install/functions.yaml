@@ -13,31 +13,31 @@ metadata:
 spec:
   package: xpkg.crossplane.io/crossplane-contrib/function-go-templating:v0.12.3
 ---
-apiVersion: pkg.crossplane.io/v1
-kind: Function
-metadata:
-  name: function-pause
-spec:
-  package: registry.localhost:5000/function-pause:v0.1.30
+# apiVersion: pkg.crossplane.io/v1
+# kind: Function
+# metadata:
+#   name: function-pause
+# spec:
+#   package: registry.localhost:5000/function-pause:v0.1.30
 ---
 apiVersion: pkg.crossplane.io/v1
 kind: Function
 metadata:
   name: function-recovery
 spec:
-  package: registry.localhost:5000/function-recovery:v0.1.30
+  package: registry.localhost:5000/function-recovery:v0.1.29
   runtimeConfigRef:
     apiVersion: pkg.crossplane.io/v1beta1
     kind: DeploymentRuntimeConfig
     name: function-recovery-runtime
 ---
-apiVersion: pkg.crossplane.io/v1
-kind: Function
-metadata:
-  name: function-recovery-python
-spec:
-  package: registry.localhost:5000/function-recovery-python:v0.1.30
-  runtimeConfigRef:
-    apiVersion: pkg.crossplane.io/v1beta1
-    kind: DeploymentRuntimeConfig
-    name: function-recovery-runtime
+# apiVersion: pkg.crossplane.io/v1
+# kind: Function
+# metadata:
+#   name: function-recovery-python
+# spec:
+#   package: registry.localhost:5000/function-recovery-python:v0.1.30
+#   runtimeConfigRef:
+#     apiVersion: pkg.crossplane.io/v1beta1
+#     kind: DeploymentRuntimeConfig
+#     name: function-recovery-runtime
