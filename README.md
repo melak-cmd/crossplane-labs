@@ -260,11 +260,17 @@ uses `metadata.generateName: postgresqlrestore-` and appends a unique suffix;
 callers needing a stable idempotent name can provide `metadata.name` instead.
 The `WatchOperation` runs the prepare, delete,
 restore, cleanup, and resume stages against the PostgreSQL XR named by
-`spec.name` in the request namespace, without requiring a trigger label. It
-reads the recovery plan named `<spec.name>-recovery-plan`; the plan must already
-exist and the target CNPG Cluster must be absent. A failed restore is one-shot;
-create a new request to retry it, and delete completed requests before
-restoring the same database again.
+`spec.name` in the request namespace, without requiring a trigger label. The
+`prepare` step stores the recovery plan (a copy of the CNPG Cluster spec) in the
+`recovery.database.nuagik.sncf.fr/plan` annotation of the `PostgreSQLRestore`,
+and `restore` reads it back; no ConfigMap is used. The annotation
+`recovery.database.nuagik.sncf.fr/phase` records progress so each step runs only
+once and in order. Updating a request after it finished starts another
+Operation, whose steps find the work already done and do nothing (updates made
+while a restore runs do not start one, because the WatchOperation uses
+`concurrencyPolicy: Forbid`). A failed restore is one-shot; create a
+new request to retry it, and delete completed requests before restoring the same
+database again. See `functions/function-recovery/README.md` for details.
 
 ## Project Layout
 

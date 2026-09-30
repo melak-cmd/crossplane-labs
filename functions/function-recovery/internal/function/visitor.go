@@ -16,6 +16,7 @@ type operationVisitor struct {
 	handler       *Handler
 	rsp           *fnv1.RunFunctionResponse
 	input         *model.Input
+	restore       model.RestoreRef
 	postgresql    *unstructured.Unstructured
 	statusSubject *OperationStatusSubject
 }
@@ -26,7 +27,7 @@ func (v operationVisitor) VisitPrepare(operations.Prepare) error {
 		FatalOperation(v.rsp, v.statusSubject, model.Operation(v.input.Spec.Mode), err, "cannot get recovery Cluster")
 		return nil
 	}
-	if err := operations.PersistRecoveryPlan(v.ctx, v.handler.clusterClient, v.input, v.postgresql, cluster); err != nil {
+	if err := operations.PersistRecoveryPlan(v.ctx, v.handler.clusterClient, v.input, v.restore, v.postgresql, cluster); err != nil {
 		FatalOperation(v.rsp, v.statusSubject, model.Operation(v.input.Spec.Mode), err, "cannot persist recovery plan")
 		return nil
 	}
@@ -35,24 +36,21 @@ func (v operationVisitor) VisitPrepare(operations.Prepare) error {
 }
 
 func (v operationVisitor) VisitRestore(op operations.Restore) error {
-	planName := v.input.Spec.PlanName
-	plan, err := v.handler.clusterClient.GetRecoveryPlan(
-		v.ctx, v.input.Spec.Target.Namespace, planName,
-	)
+	restore, err := v.handler.clusterClient.GetPostgreSQLRestore(v.ctx, v.restore.Namespace, v.restore.Name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			InvalidOperation(
 				v.rsp,
 				v.statusSubject,
 				model.Operation(v.input.Spec.Mode),
-				fmt.Errorf("recovery plan ConfigMap %q was not found", planName),
+				fmt.Errorf("PostgreSQLRestore %s/%s was not found", v.restore.Namespace, v.restore.Name),
 			)
 			return nil
 		}
-		FatalOperation(v.rsp, v.statusSubject, model.Operation(v.input.Spec.Mode), err, "cannot get recovery plan")
+		FatalOperation(v.rsp, v.statusSubject, model.Operation(v.input.Spec.Mode), err, "cannot get PostgreSQLRestore")
 		return nil
 	}
-	_, cluster, err := op.Run(v.input, plan)
+	_, cluster, err := op.Run(v.input, restore)
 	if err != nil {
 		InvalidOperation(v.rsp, v.statusSubject, model.Operation(v.input.Spec.Mode), err)
 		return nil
@@ -101,7 +99,7 @@ func (v operationVisitor) VisitPrepareDelete(operations.PrepareDelete) error {
 		FatalOperation(v.rsp, v.statusSubject, model.Operation(v.input.Spec.Mode), err, "cannot get recovery Cluster")
 		return nil
 	}
-	if err := operations.PrepareAndDelete(v.ctx, v.handler.clusterClient, v.input, v.postgresql, cluster); err != nil {
+	if err := operations.PrepareAndDelete(v.ctx, v.handler.clusterClient, v.input, v.restore, v.postgresql, cluster); err != nil {
 		FatalOperation(v.rsp, v.statusSubject, model.Operation(v.input.Spec.Mode), err, "cannot prepare and delete CNPG Cluster")
 		return nil
 	}

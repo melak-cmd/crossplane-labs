@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,6 +11,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic/fake"
+
+	"github.com/melak-cmd/crossplane-labs/functions/function-recovery/internal/model"
 )
 
 func TestDeleteAndWaitDeletesNamespacedCluster(t *testing.T) {
@@ -45,22 +48,17 @@ func TestGetClusterUsesReferencedName(t *testing.T) {
 	}
 }
 
-func TestGetRecoveryPlanUsesPlanNameAndNamespace(t *testing.T) {
-	plan := &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "v1",
-		"kind":       "ConfigMap",
-		"metadata":   map[string]interface{}{"name": "orders-plan", "namespace": "platform"},
-		"data":       map[string]interface{}{"manifest.json": `{"kind":"Cluster"}`},
-	}}
-	client := fake.NewSimpleDynamicClient(runtime.NewScheme(), plan)
+func TestGetPostgreSQLRestoreUsesNameAndNamespace(t *testing.T) {
+	restore := newRestore("orders-restore", nil)
+	client := fake.NewSimpleDynamicClient(runtime.NewScheme(), restore)
 	clusterClient := &ClusterClient{client: client}
 
-	got, err := clusterClient.GetRecoveryPlan(context.Background(), "platform", "orders-plan")
+	got, err := clusterClient.GetPostgreSQLRestore(context.Background(), "platform", "orders-restore")
 	if err != nil {
-		t.Fatalf("GetRecoveryPlan returned an error: %v", err)
+		t.Fatalf("GetPostgreSQLRestore returned an error: %v", err)
 	}
-	if got.GetName() != "orders-plan" || got.GetNamespace() != "platform" {
-		t.Fatalf("GetRecoveryPlan returned %s/%s, want platform/orders-plan", got.GetNamespace(), got.GetName())
+	if got.GetName() != "orders-restore" || got.GetNamespace() != "platform" {
+		t.Fatalf("GetPostgreSQLRestore returned %s/%s, want platform/orders-restore", got.GetNamespace(), got.GetName())
 	}
 }
 
@@ -259,7 +257,22 @@ func TestRemoveRecoveryIsIdempotent(t *testing.T) {
 	}
 }
 
-func TestPrepareRecoveryPausesAndPersistsPlanWithoutDeletingCluster(t *testing.T) {
+var ordersRestore = model.RestoreRef{Namespace: "platform", Name: "orders-restore"}
+
+func newRestore(name string, annotations map[string]interface{}) *unstructured.Unstructured {
+	metadata := map[string]interface{}{"name": name, "namespace": "platform"}
+	if annotations != nil {
+		metadata["annotations"] = annotations
+	}
+	return &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "database.nuagik.sncf.fr/v1alpha1",
+		"kind":       "PostgreSQLRestore",
+		"metadata":   metadata,
+		"spec":       map[string]interface{}{"name": "orders-database", "backupName": "orders-backup"},
+	}}
+}
+
+func prepareFixtures() (*unstructured.Unstructured, *unstructured.Unstructured) {
 	database := &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "database.nuagik.sncf.fr/v1alpha1",
 		"kind":       "PostgreSQL",
@@ -270,15 +283,14 @@ func TestPrepareRecoveryPausesAndPersistsPlanWithoutDeletingCluster(t *testing.T
 		"kind":       "Cluster",
 		"metadata":   map[string]interface{}{"name": "orders-primary", "namespace": "platform"},
 	}}
-	plan := &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "v1",
-		"kind":       "ConfigMap",
-		"metadata":   map[string]interface{}{"name": "orders-recovery-plan", "namespace": "platform"},
-		"data":       map[string]interface{}{"manifest.json": `{"kind":"Cluster"}`},
-	}}
-	client := fake.NewSimpleDynamicClient(runtime.NewScheme(), database, cluster)
+	return database, cluster
+}
+
+func TestPrepareRecoveryPausesAndStoresPlanOnRestoreWithoutDeletingCluster(t *testing.T) {
+	database, cluster := prepareFixtures()
+	client := fake.NewSimpleDynamicClient(runtime.NewScheme(), database, cluster, newRestore("orders-restore", nil))
 	clusterClient := &ClusterClient{client: client}
-	if err := clusterClient.PrepareRecovery(context.Background(), "platform", "orders-database", plan); err != nil {
+	if err := clusterClient.PrepareRecovery(context.Background(), ordersRestore, "platform", "orders-database", `{"kind":"Cluster"}`); err != nil {
 		t.Fatalf("PrepareRecovery returned an error: %v", err)
 	}
 	pausedDatabase, err := client.Resource(postgresqlGVR).Namespace("platform").Get(context.Background(), "orders-database", metav1.GetOptions{})
@@ -288,46 +300,100 @@ func TestPrepareRecoveryPausesAndPersistsPlanWithoutDeletingCluster(t *testing.T
 	if pausedDatabase.GetAnnotations()["crossplane.io/paused"] != "true" {
 		t.Fatal("expected Database to be paused")
 	}
-	if _, err := client.Resource(configMapGVR).Namespace("platform").Get(context.Background(), "orders-recovery-plan", metav1.GetOptions{}); err != nil {
-		t.Fatalf("expected recovery plan to be persisted: %v", err)
+	restore, err := client.Resource(postgresqlRestoreGVR).Namespace("platform").Get(context.Background(), "orders-restore", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("failed to read PostgreSQLRestore: %v", err)
+	}
+	if got := restore.GetAnnotations()[model.PlanAnnotation]; got != `{"kind":"Cluster"}` {
+		t.Fatalf("expected the plan annotation to be stored, got %q", got)
+	}
+	if got := restore.GetAnnotations()[model.PhaseAnnotation]; got != string(model.PhasePrepared) {
+		t.Fatalf("expected phase %q, got %q", model.PhasePrepared, got)
 	}
 	if _, err := client.Resource(clusterGVR).Namespace("platform").Get(context.Background(), "orders-primary", metav1.GetOptions{}); err != nil {
 		t.Fatalf("expected Cluster to remain until the next Operation step: %v", err)
 	}
 }
 
-func TestPrepareAndDeletePausesPersistsPlanAndDeletesCluster(t *testing.T) {
-	database := &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "database.nuagik.sncf.fr/v1alpha1",
-		"kind":       "PostgreSQL",
-		"metadata":   map[string]interface{}{"name": "orders-database", "namespace": "platform"},
-	}}
-	cluster := &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "postgresql.cnpg.io/v1",
-		"kind":       "Cluster",
-		"metadata":   map[string]interface{}{"name": "orders-primary", "namespace": "platform"},
-		"spec":       map[string]interface{}{"bootstrap": map[string]interface{}{"initdb": map[string]interface{}{"database": "orders"}}},
-	}}
-	plan := &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "v1",
-		"kind":       "ConfigMap",
-		"metadata":   map[string]interface{}{"name": "orders-recovery-plan", "namespace": "platform"},
-		"data":       map[string]interface{}{"manifest.json": `{"kind":"Cluster"}`},
-	}}
-	client := fake.NewSimpleDynamicClient(runtime.NewScheme(), database, cluster)
+func TestPrepareRecoveryDoesNotCreateAConfigMap(t *testing.T) {
+	database, cluster := prepareFixtures()
+	client := fake.NewSimpleDynamicClient(runtime.NewScheme(), database, cluster, newRestore("orders-restore", nil))
+	clusterClient := &ClusterClient{client: client}
+	if err := clusterClient.PrepareRecovery(context.Background(), ordersRestore, "platform", "orders-database", `{"kind":"Cluster"}`); err != nil {
+		t.Fatalf("PrepareRecovery returned an error: %v", err)
+	}
+	for _, action := range client.Actions() {
+		if action.GetResource().Resource == "configmaps" {
+			t.Fatalf("unexpected ConfigMap access: %s", action.GetVerb())
+		}
+	}
+}
+
+func TestPrepareRecoveryRejectsOversizedPlanBeforeChangingAnything(t *testing.T) {
+	database, cluster := prepareFixtures()
+	client := fake.NewSimpleDynamicClient(runtime.NewScheme(), database, cluster, newRestore("orders-restore", nil))
 	clusterClient := &ClusterClient{client: client, interval: time.Millisecond, timeout: time.Second}
-	if err := clusterClient.PrepareAndDelete(context.Background(), "platform", "orders-database", "platform", "orders-primary", plan); err != nil {
+	oversized := strings.Repeat("x", maxAnnotationBytes)
+	err := clusterClient.PrepareRecovery(context.Background(), ordersRestore, "platform", "orders-database", oversized)
+	if err == nil || !strings.Contains(err.Error(), "too large") {
+		t.Fatalf("expected a too large error, got %v", err)
+	}
+	pausedDatabase, getErr := client.Resource(postgresqlGVR).Namespace("platform").Get(context.Background(), "orders-database", metav1.GetOptions{})
+	if getErr != nil {
+		t.Fatalf("failed to read Database: %v", getErr)
+	}
+	if _, paused := pausedDatabase.GetAnnotations()["crossplane.io/paused"]; paused {
+		t.Fatal("Database must not be paused when the plan is rejected")
+	}
+	restore, _ := client.Resource(postgresqlRestoreGVR).Namespace("platform").Get(context.Background(), "orders-restore", metav1.GetOptions{})
+	if _, found := restore.GetAnnotations()[model.PlanAnnotation]; found {
+		t.Fatal("PostgreSQLRestore must not be modified when the plan is rejected")
+	}
+	if _, err := client.Resource(clusterGVR).Namespace("platform").Get(context.Background(), "orders-primary", metav1.GetOptions{}); err != nil {
+		t.Fatalf("Cluster must remain when the plan is rejected: %v", err)
+	}
+}
+
+func TestCheckAnnotationBudgetCountsExistingAnnotations(t *testing.T) {
+	existing := map[string]string{"kubectl.kubernetes.io/last-applied-configuration": strings.Repeat("y", maxAnnotationBytes-100)}
+	if err := checkAnnotationBudget(existing, map[string]string{"k": "small"}); err != nil {
+		t.Fatalf("expected a small addition to fit: %v", err)
+	}
+	if err := checkAnnotationBudget(existing, map[string]string{"k": strings.Repeat("z", 200)}); err == nil {
+		t.Fatal("expected existing annotations to count against the budget")
+	}
+}
+
+func TestSetRestorePhaseOnlyPatchesThePhaseAnnotation(t *testing.T) {
+	restore := newRestore("orders-restore", map[string]interface{}{
+		model.PlanAnnotation:  `{"kind":"Cluster"}`,
+		model.PhaseAnnotation: string(model.PhasePrepared),
+	})
+	client := fake.NewSimpleDynamicClient(runtime.NewScheme(), restore)
+	clusterClient := &ClusterClient{client: client}
+	if err := clusterClient.SetRestorePhase(context.Background(), ordersRestore, model.PhaseDeleted); err != nil {
+		t.Fatalf("SetRestorePhase returned an error: %v", err)
+	}
+	updated, _ := client.Resource(postgresqlRestoreGVR).Namespace("platform").Get(context.Background(), "orders-restore", metav1.GetOptions{})
+	if got := updated.GetAnnotations()[model.PhaseAnnotation]; got != string(model.PhaseDeleted) {
+		t.Fatalf("expected phase %q, got %q", model.PhaseDeleted, got)
+	}
+	if got := updated.GetAnnotations()[model.PlanAnnotation]; got != `{"kind":"Cluster"}` {
+		t.Fatalf("plan annotation must be preserved, got %q", got)
+	}
+}
+
+func TestPrepareAndDeleteStoresPlanAndDeletesCluster(t *testing.T) {
+	database, cluster := prepareFixtures()
+	unstructured.SetNestedField(cluster.Object, map[string]interface{}{"initdb": map[string]interface{}{"database": "orders"}}, "spec", "bootstrap")
+	client := fake.NewSimpleDynamicClient(runtime.NewScheme(), database, cluster, newRestore("orders-restore", nil))
+	clusterClient := &ClusterClient{client: client, interval: time.Millisecond, timeout: time.Second}
+	if err := clusterClient.PrepareAndDelete(context.Background(), ordersRestore, "platform", "orders-database", "platform", "orders-primary", `{"kind":"Cluster"}`); err != nil {
 		t.Fatalf("PrepareAndDelete returned an error: %v", err)
 	}
-	pausedDatabase, err := client.Resource(postgresqlGVR).Namespace("platform").Get(context.Background(), "orders-database", metav1.GetOptions{})
-	if err != nil {
-		t.Fatalf("failed to read Database: %v", err)
-	}
-	if pausedDatabase.GetAnnotations()["crossplane.io/paused"] != "true" {
-		t.Fatal("expected Database to be paused")
-	}
-	if _, err := client.Resource(configMapGVR).Namespace("platform").Get(context.Background(), "orders-recovery-plan", metav1.GetOptions{}); err != nil {
-		t.Fatalf("expected recovery plan to be persisted before deletion: %v", err)
+	restore, _ := client.Resource(postgresqlRestoreGVR).Namespace("platform").Get(context.Background(), "orders-restore", metav1.GetOptions{})
+	if restore.GetAnnotations()[model.PlanAnnotation] == "" {
+		t.Fatal("expected the plan to be stored before deletion")
 	}
 	if _, err := client.Resource(clusterGVR).Namespace("platform").Get(context.Background(), "orders-primary", metav1.GetOptions{}); !apierrors.IsNotFound(err) {
 		t.Fatalf("expected Cluster to be deleted, got error: %v", err)

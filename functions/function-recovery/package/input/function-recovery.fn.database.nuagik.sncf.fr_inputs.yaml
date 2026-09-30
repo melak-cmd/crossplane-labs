@@ -57,8 +57,6 @@ spec:
                 - prepare-delete
                 - resume
                 type: string
-              planName:
-                type: string
               target:
                 properties:
                   namespace:

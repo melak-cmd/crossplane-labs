@@ -9,4 +9,5 @@ const (
 	OperationUnknown          = "unknown"
 	MessageOperationSucceeded = "%s operation completed successfully"
 	MessageOperationFailed    = "%s operation failed: %s"
+	MessageOperationSkipped   = "%s operation skipped: recovery phase is %q"
 )

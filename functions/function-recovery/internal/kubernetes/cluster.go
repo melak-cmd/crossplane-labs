@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -15,14 +16,20 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
+
+	"github.com/melak-cmd/crossplane-labs/functions/function-recovery/internal/model"
 )
 
 var clusterGVR = schema.GroupVersionResource{
 	Group: "postgresql.cnpg.io", Version: "v1", Resource: "clusters",
 }
 
-var configMapGVR = schema.GroupVersionResource{Version: "v1", Resource: "configmaps"}
 var postgresqlGVR = schema.GroupVersionResource{Group: "database.nuagik.sncf.fr", Version: "v1alpha1", Resource: "postgresqls"}
+var postgresqlRestoreGVR = schema.GroupVersionResource{Group: "database.nuagik.sncf.fr", Version: "v1alpha1", Resource: "postgresqlrestores"}
+
+// maxAnnotationBytes is the Kubernetes limit on the total size of all
+// annotations of an object (keys plus values).
+const maxAnnotationBytes = 256 * (1 << 10)
 
 type ClusterClient struct {
 	client   dynamic.Interface
@@ -77,12 +84,14 @@ func (c *ClusterClient) GetCluster(ctx context.Context, namespace, name string) 
 	return c.client.Resource(clusterGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
-func (c *ClusterClient) GetRecoveryPlan(ctx context.Context, namespace, name string) (*unstructured.Unstructured, error) {
+// GetPostgreSQLRestore reads the live PostgreSQLRestore that carries the
+// recovery plan and phase.
+func (c *ClusterClient) GetPostgreSQLRestore(ctx context.Context, namespace, name string) (*unstructured.Unstructured, error) {
 	c.initialize()
 	if c.initErr != nil {
 		return nil, c.initErr
 	}
-	return c.client.Resource(configMapGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
+	return c.client.Resource(postgresqlRestoreGVR).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
 func (c *ClusterClient) GetPostgreSQL(ctx context.Context, namespace, name string) (*unstructured.Unstructured, error) {
@@ -142,41 +151,78 @@ func (c *ClusterClient) waitForReady(ctx context.Context, clusters dynamic.Resou
 	})
 }
 
-func (c *ClusterClient) PrepareAndDelete(ctx context.Context, postgresqlNamespace, postgresqlName, clusterNamespace, clusterName string, plan *unstructured.Unstructured) error {
-	if err := c.PrepareRecovery(ctx, postgresqlNamespace, postgresqlName, plan); err != nil {
+func (c *ClusterClient) PrepareAndDelete(ctx context.Context, restore model.RestoreRef, postgresqlNamespace, postgresqlName, clusterNamespace, clusterName, plan string) error {
+	if err := c.PrepareRecovery(ctx, restore, postgresqlNamespace, postgresqlName, plan); err != nil {
 		return err
 	}
 	return c.DeleteAndWait(ctx, clusterNamespace, clusterName)
 }
 
-func (c *ClusterClient) PrepareRecovery(ctx context.Context, namespace, name string, plan *unstructured.Unstructured) error {
+// PrepareRecovery pauses the PostgreSQL XR and records the plan and the
+// prepared phase on the PostgreSQLRestore in one patch. It fails before
+// changing anything when the plan does not fit in the annotation budget.
+func (c *ClusterClient) PrepareRecovery(ctx context.Context, restore model.RestoreRef, postgresqlNamespace, postgresqlName, plan string) error {
 	c.initialize()
 	if c.initErr != nil {
 		return c.initErr
 	}
-	postgresqls := c.client.Resource(postgresqlGVR).Namespace(namespace)
-	if _, err := postgresqls.Get(ctx, name, metav1.GetOptions{}); err != nil {
+	restores := c.client.Resource(postgresqlRestoreGVR).Namespace(restore.Namespace)
+	current, err := restores.Get(ctx, restore.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	annotations := map[string]string{
+		model.PlanAnnotation:  plan,
+		model.PhaseAnnotation: string(model.PhasePrepared),
+	}
+	if err := checkAnnotationBudget(current.GetAnnotations(), annotations); err != nil {
+		return err
+	}
+	postgresqls := c.client.Resource(postgresqlGVR).Namespace(postgresqlNamespace)
+	if _, err := postgresqls.Get(ctx, postgresqlName, metav1.GetOptions{}); err != nil {
 		return err
 	}
 	pausePatch := []byte(`{"metadata":{"annotations":{"crossplane.io/paused":"true"}}}`)
-	if _, err := postgresqls.Patch(ctx, name, types.MergePatchType, pausePatch, metav1.PatchOptions{}); err != nil {
+	if _, err := postgresqls.Patch(ctx, postgresqlName, types.MergePatchType, pausePatch, metav1.PatchOptions{}); err != nil {
 		return err
 	}
-	configMaps := c.client.Resource(configMapGVR).Namespace(namespace)
-	plan = plan.DeepCopy()
-	plan.SetNamespace(namespace)
-	current, err := configMaps.Get(ctx, plan.GetName(), metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		if _, err := configMaps.Create(ctx, plan, metav1.CreateOptions{}); err != nil {
-			return err
-		}
-	} else if err != nil {
-		return err
-	} else {
-		plan.SetResourceVersion(current.GetResourceVersion())
-		if _, err := configMaps.Update(ctx, plan, metav1.UpdateOptions{}); err != nil {
-			return err
-		}
+	return c.patchRestoreAnnotations(ctx, restore, annotations)
+}
+
+// SetRestorePhase records the recovery phase on the PostgreSQLRestore.
+func (c *ClusterClient) SetRestorePhase(ctx context.Context, restore model.RestoreRef, phase model.Phase) error {
+	c.initialize()
+	if c.initErr != nil {
+		return c.initErr
+	}
+	return c.patchRestoreAnnotations(ctx, restore, map[string]string{model.PhaseAnnotation: string(phase)})
+}
+
+func (c *ClusterClient) patchRestoreAnnotations(ctx context.Context, restore model.RestoreRef, annotations map[string]string) error {
+	patch, err := json.Marshal(map[string]interface{}{"metadata": map[string]interface{}{"annotations": annotations}})
+	if err != nil {
+		return fmt.Errorf("cannot encode PostgreSQLRestore annotation patch: %w", err)
+	}
+	_, err = c.client.Resource(postgresqlRestoreGVR).Namespace(restore.Namespace).Patch(ctx, restore.Name, types.MergePatchType, patch, metav1.PatchOptions{})
+	return err
+}
+
+// checkAnnotationBudget verifies that adding the annotations keeps the total
+// annotation size within the Kubernetes limit.
+func checkAnnotationBudget(existing, add map[string]string) error {
+	merged := map[string]string{}
+	for key, value := range existing {
+		merged[key] = value
+	}
+	for key, value := range add {
+		merged[key] = value
+	}
+	total := 0
+	for key, value := range merged {
+		total += len(key) + len(value)
+	}
+	if total > maxAnnotationBytes {
+		return fmt.Errorf("recovery plan is too large: annotations would be %d bytes, the Kubernetes limit is %d bytes", total, maxAnnotationBytes)
 	}
 	return nil
 }

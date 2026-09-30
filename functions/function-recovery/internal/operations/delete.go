@@ -17,8 +17,12 @@ type ClusterReader interface {
 	GetCluster(context.Context, string, string) (*unstructured.Unstructured, error)
 }
 
-type RecoveryPlanReader interface {
-	GetRecoveryPlan(context.Context, string, string) (*unstructured.Unstructured, error)
+type RestoreReader interface {
+	GetPostgreSQLRestore(context.Context, string, string) (*unstructured.Unstructured, error)
+}
+
+type RestorePhaseSetter interface {
+	SetRestorePhase(context.Context, model.RestoreRef, model.Phase) error
 }
 
 type PostgreSQLReader interface {
@@ -38,11 +42,11 @@ type RecoveryCleaner interface {
 }
 
 type PrepareDeleter interface {
-	PrepareAndDelete(context.Context, string, string, string, string, *unstructured.Unstructured) error
+	PrepareAndDelete(context.Context, model.RestoreRef, string, string, string, string, string) error
 }
 
 type RecoveryPreparer interface {
-	PrepareRecovery(context.Context, string, string, *unstructured.Unstructured) error
+	PrepareRecovery(context.Context, model.RestoreRef, string, string, string) error
 }
 
 func DeleteCluster(ctx context.Context, deleter ClusterDeleter, in *model.Input) error {
@@ -59,7 +63,7 @@ func CleanupRecovery(ctx context.Context, cleaner RecoveryCleaner, in *model.Inp
 	return cleaner.RemoveRecovery(ctx, in.Spec.Target.Namespace, in.Spec.Target.Name)
 }
 
-func PrepareAndDelete(ctx context.Context, client PrepareDeleter, in *model.Input, postgresql, cluster *unstructured.Unstructured) error {
+func PrepareAndDelete(ctx context.Context, client PrepareDeleter, in *model.Input, restore model.RestoreRef, postgresql, cluster *unstructured.Unstructured) error {
 	if client == nil {
 		return fmt.Errorf("CNPG recovery client is not configured")
 	}
@@ -67,10 +71,10 @@ func PrepareAndDelete(ctx context.Context, client PrepareDeleter, in *model.Inpu
 	if err != nil {
 		return err
 	}
-	return client.PrepareAndDelete(ctx, postgresql.GetNamespace(), postgresql.GetName(), in.Spec.Target.Namespace, in.Spec.Target.Name, plan)
+	return client.PrepareAndDelete(ctx, restore, postgresql.GetNamespace(), postgresql.GetName(), in.Spec.Target.Namespace, in.Spec.Target.Name, plan)
 }
 
-func PersistRecoveryPlan(ctx context.Context, client RecoveryPreparer, in *model.Input, postgresql, cluster *unstructured.Unstructured) error {
+func PersistRecoveryPlan(ctx context.Context, client RecoveryPreparer, in *model.Input, restore model.RestoreRef, postgresql, cluster *unstructured.Unstructured) error {
 	if client == nil {
 		return fmt.Errorf("CNPG recovery client is not configured")
 	}
@@ -78,5 +82,5 @@ func PersistRecoveryPlan(ctx context.Context, client RecoveryPreparer, in *model
 	if err != nil {
 		return err
 	}
-	return client.PrepareRecovery(ctx, postgresql.GetNamespace(), postgresql.GetName(), plan)
+	return client.PrepareRecovery(ctx, restore, postgresql.GetNamespace(), postgresql.GetName(), plan)
 }

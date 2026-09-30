@@ -11,53 +11,48 @@ import (
 const (
 	APIVersion  = "postgresql.cnpg.io/v1"
 	ClusterKind = "Cluster"
-	planDataKey = "manifest.json"
 )
 
-func RecoveryPlan(in *model.Input, cluster *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+// RecoveryPlan returns the JSON encoding of a sanitized copy of the CNPG
+// Cluster manifest. It is stored as an annotation on the PostgreSQLRestore.
+func RecoveryPlan(in *model.Input, cluster *unstructured.Unstructured) (string, error) {
 	if cluster.GetAPIVersion() != APIVersion || cluster.GetKind() != ClusterKind {
-		return nil, fmt.Errorf("required resource is not a CNPG Cluster")
+		return "", fmt.Errorf("required resource is not a CNPG Cluster")
 	}
 	if cluster.GetName() != in.Spec.Target.Name || cluster.GetNamespace() != in.Spec.Target.Namespace {
-		return nil, fmt.Errorf("required CNPG Cluster does not match target")
+		return "", fmt.Errorf("required CNPG Cluster does not match target")
 	}
 	manifest := cluster.DeepCopy().Object
 	delete(manifest, "status")
 	metadata, found, err := unstructured.NestedMap(manifest, "metadata")
 	if err != nil || !found {
-		return nil, fmt.Errorf("CNPG Cluster does not contain metadata")
+		return "", fmt.Errorf("CNPG Cluster does not contain metadata")
 	}
 	for _, field := range []string{"creationTimestamp", "deletionGracePeriodSeconds", "deletionTimestamp", "generation", "managedFields", "resourceVersion", "selfLink", "uid"} {
 		delete(metadata, field)
 	}
 	if err := unstructured.SetNestedMap(manifest, metadata, "metadata"); err != nil {
-		return nil, fmt.Errorf("cannot clean CNPG Cluster metadata: %w", err)
+		return "", fmt.Errorf("cannot clean CNPG Cluster metadata: %w", err)
 	}
 	encoded, err := json.Marshal(manifest)
 	if err != nil {
-		return nil, fmt.Errorf("cannot encode CNPG Cluster: %w", err)
+		return "", fmt.Errorf("cannot encode CNPG Cluster: %w", err)
 	}
-	return &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "v1",
-		"kind":       "ConfigMap",
-		"metadata": map[string]interface{}{
-			"name":      in.Spec.PlanName,
-			"namespace": in.Spec.Target.Namespace,
-		},
-		"data": map[string]interface{}{planDataKey: string(encoded)},
-	}}, nil
+	return string(encoded), nil
 }
 
-func RestoreCluster(in *model.Input, plan *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+// RestoreCluster rebuilds the CNPG Cluster from the plan stored on the
+// PostgreSQLRestore.
+func RestoreCluster(in *model.Input, restore *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 	if in.Spec.Backup == nil {
 		return nil, fmt.Errorf("restore mode requires a Backup reference")
 	}
-	data, found, err := unstructured.NestedStringMap(plan.Object, "data")
-	if err != nil || !found || data[planDataKey] == "" {
-		return nil, fmt.Errorf("recovery plan does not contain manifest.json")
+	plan := restore.GetAnnotations()[model.PlanAnnotation]
+	if plan == "" {
+		return nil, fmt.Errorf("no recovery plan found on PostgreSQLRestore %s/%s", restore.GetNamespace(), restore.GetName())
 	}
 	manifest := map[string]interface{}{}
-	if err := json.Unmarshal([]byte(data[planDataKey]), &manifest); err != nil {
+	if err := json.Unmarshal([]byte(plan), &manifest); err != nil {
 		return nil, fmt.Errorf("cannot decode recovery plan: %w", err)
 	}
 	if manifest["kind"] != ClusterKind || manifest["apiVersion"] != APIVersion {

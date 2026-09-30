@@ -17,7 +17,6 @@ type InputSpec struct {
 	// +kubebuilder:validation:Enum=prepare;delete;restore;cleanup;prepare-delete;resume
 	Mode           string           `json:"mode"`
 	Target         ClusterReference `json:"target"`
-	PlanName       string           `json:"planName,omitempty"`
 	Backup         *BackupReference `json:"backup,omitempty"`
 	WatchedRequest bool             `json:"watchedRequest,omitempty"`
 }

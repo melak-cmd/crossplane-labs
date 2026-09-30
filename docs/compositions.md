@@ -29,6 +29,7 @@ aggregated `crossplane-compose-cnpg-resources` ClusterRole in
 `rbac.crossplane.io/aggregate-to-crossplane: "true"` label aggregates these
 permissions into Crossplane's main role.
 
-The recovery function has a separate, namespaced Role for its direct CNPG
-Cluster and recovery-plan ConfigMap operations. It does not delete or manage a
-provider-kubernetes `Object`.
+The recovery function has a separate ClusterRole for its direct CNPG Cluster
+operations and for reading and annotating `PostgreSQLRestore` requests, where it
+stores the recovery plan. It does not use ConfigMaps and does not delete or
+manage a provider-kubernetes `Object`.

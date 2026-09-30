@@ -19,9 +19,6 @@ func Input(in *model.Input) error {
 		}
 		return nil
 	}
-	if in.Spec.PlanName == "" {
-		return fmt.Errorf("planName is required")
-	}
 	if in.Spec.Mode == string(model.OperationPrepare) || in.Spec.Mode == string(model.OperationPrepareDelete) {
 		if in.Spec.Backup != nil {
 			return fmt.Errorf("prepare modes do not accept a Backup reference")

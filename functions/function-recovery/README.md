@@ -16,7 +16,8 @@ package/            Crossplane function package metadata and generated input sch
 ```
 
 Prepare reads the referenced Cluster, pauses its Database XR, and synchronously
-persists the recovery plan ConfigMap before returning success. Delete uses the
+stores the recovery plan as an annotation on the `PostgreSQLRestore` before
+returning success. Delete uses the
 runtime service account to delete the native CNPG Cluster, then waits until it
 is absent. Restore creates the recovered Cluster through the function runtime's
 Kubernetes client and waits for its CNPG `Ready=True` condition. A retry
@@ -29,10 +30,12 @@ A Crossplane Operation Function that prepares and restores a CNPG `Cluster`
 directly from a CNPG `Backup`.
 
 Recovery can use two ordered Operation steps: `prepare` pauses the Database XR
-and persists a copy of the current CNPG Cluster to a ConfigMap; when it returns
+and stores a copy of the current CNPG Cluster in the
+`recovery.database.nuagik.sncf.fr/plan` annotation of the `PostgreSQLRestore`; when it returns
 successfully, the next `delete` step removes the old CNPG Cluster. The function
 also supports a single `prepare-delete` mode for
-the same sequence. `restore` reads the ConfigMap, removes
+the same sequence. `restore` reads the plan annotation from the live
+`PostgreSQLRestore`, removes
 `spec.bootstrap.initdb`, adds `spec.bootstrap.recovery`, and creates the CNPG
 Cluster with the requested identity. After the restored Cluster is ready, run
 `cleanup` to remove `spec.bootstrap.recovery` while preserving the rest of the
@@ -51,34 +54,56 @@ spec:
   mode: restore
   target:
     namespace: platform
-  planName: orders-recovery-plan
   backup:
     name: orders-backup
     namespace: platform
 ```
 
-For `prepare`, provide `mode: prepare`, the CNPG Cluster target, and
-`planName`; it pauses the Database and persists the plan before returning.
+For `prepare`, provide `mode: prepare` and the CNPG Cluster target; it pauses
+the Database and stores the plan on the `PostgreSQLRestore` before returning.
 For `delete`, provide `mode: delete` and the Cluster target. This deletes the
 live CNPG Cluster and is destructive.
 For `restore`, provide
 `mode: restore`, the same Cluster target,
-the plan name, and a Backup reference with its name and namespace. The Backup
+and a Backup reference with its name and namespace. The Backup
 must be in the same namespace as the target. For `cleanup`, provide `mode: cleanup` and the Cluster target; it
 removes only `spec.bootstrap.recovery` and succeeds if that field is already
 absent. The function validates recovery source fields but does not check that
 the referenced source resources exist.
 
-For the initial recovery workflow, use the ordered steps in
-`examples/databases/03-prepare-recovery.yaml`, or use `mode: prepare-delete`
-with the Cluster target and `planName` to perform the sequence in one step.
+The supported recovery workflow is the WatchOperation in
+`operations/database-restore-watch.yaml`: create a `PostgreSQLRestore` (see
+`examples/databases/04-database-restore.yaml`) and it runs the ordered steps.
+`mode: prepare-delete` performs prepare and delete in one step.
 
-For manually authored Operations, each function step provides the PostgreSQL XR
-as the required resource `postgresql`. The function reads its
+If you author an Operation by hand instead, each function step provides the PostgreSQL XR
+as the required resource `postgresql` and a `PostgreSQLRestore` as the required
+resource `postgresqlrestore`. The function reads the XR's
 `spec.crossplane.resourceRefs` to resolve the CNPG `Cluster` name;
-`target.namespace` remains an explicit input.
-Restore reads the recovery-plan ConfigMap named by `planName` directly using
-the function's Kubernetes client and `target.namespace`.
+`target.namespace` remains an explicit input. The plan and recovery phase are
+stored on and read from the `PostgreSQLRestore` through the function's
+Kubernetes client. No ConfigMap is used and the `planName` input is rejected.
+
+### Recovery plan and phase
+
+The plan annotation `recovery.database.nuagik.sncf.fr/plan` holds the sanitized
+Cluster manifest as JSON (it is a copy of the Cluster spec and contains no
+credentials). The plan must fit in the Kubernetes annotation budget of 256 KiB
+for all annotations together; `prepare` fails before changing anything if it
+does not. The annotations are kept after the restore as a record.
+
+The annotation `recovery.database.nuagik.sncf.fr/phase` records progress
+(`prepared`, `deleted`, `restored`, `cleaned`, `resumed`). Each step runs only
+when the phase is its predecessor (`prepare` with no phase, `delete` after
+`prepared`, `restore` after `deleted`, `cleanup` after `restored`, `resume`
+after `cleaned`) and records the next phase only after it succeeds. A step
+invoked in any other phase succeeds as a no-op. This matters because an update
+of a watched `PostgreSQLRestore` can make the WatchOperation start another
+Operation for it. Updates made while a restore runs do not (the WatchOperation
+uses `concurrencyPolicy: Forbid`, and a normal restore produces exactly one
+Operation), but an update after the restore finished does, and a step cannot
+tell which Operation it belongs to. That extra Operation finds every step
+already done and does nothing.
 
 `operations/database-restore-watch.yaml` watches namespaced
 `PostgreSQLRestore` requests without requiring a recovery trigger label.
@@ -92,6 +117,5 @@ cleanup, and resume stages. Restore request labels are not used as an
 activation filter or acknowledgement mechanism. A failed request is not
 automatically retried; create a new request after addressing the failure.
 
-See `examples/databases/03-prepare-recovery.yaml`,
-`examples/databases/04-restore-from-backup.yaml`, and
-`examples/databases/05-cleanup-recovery-bootstrap.yaml` for the ordered Backup recovery Operations.
+See `examples/databases/04-database-restore.yaml` for a `PostgreSQLRestore`
+request.

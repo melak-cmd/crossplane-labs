@@ -10,6 +10,11 @@ import (
 )
 
 func ReadInput(req *fnv1.RunFunctionRequest) (*model.Input, error) {
+	if spec := req.GetInput().GetFields()["spec"].GetStructValue(); spec != nil {
+		if _, found := spec.GetFields()["planName"]; found {
+			return nil, fmt.Errorf("planName is no longer supported: the recovery plan is stored on the PostgreSQLRestore")
+		}
+	}
 	in := &model.Input{}
 	if err := request.GetInput(req, in); err != nil {
 		return nil, err

@@ -1,7 +1,7 @@
 apiVersion: ops.crossplane.io/v1alpha1
 kind: WatchOperation
 metadata:
-  name: database-restore
+  name: postgresqlrestores.database.nuagik.sncf.fr
 spec:
   watch:
     apiVersion: database.nuagik.sncf.fr/v1alpha1
